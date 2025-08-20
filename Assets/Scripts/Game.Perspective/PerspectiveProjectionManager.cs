@@ -1,9 +1,7 @@
 using UnityEngine;
 using UnityEngine.Scripting.APIUpdating;
-using Game.Perspective;
 
-[MovedFrom("POC.GameplayProjection")]
-namespace Game.Projection
+namespace Game.Perspective
 {
     /// <summary>
     /// Simplified facade for perspective projection management.

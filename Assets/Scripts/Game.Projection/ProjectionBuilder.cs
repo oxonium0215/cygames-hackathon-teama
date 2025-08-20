@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Scripting.APIUpdating;
 
-[MovedFrom("POC.Level")]
 namespace Game.Projection
 {
     [MovedFrom("POC.Level")]
