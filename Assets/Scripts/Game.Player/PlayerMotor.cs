@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.Scripting.APIUpdating;
 
-[MovedFrom("POC.Gameplay")]
 namespace Game.Player
 {
     [MovedFrom("POC.Gameplay")]

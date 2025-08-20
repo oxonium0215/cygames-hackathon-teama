@@ -25,3 +25,4 @@ namespace Game.Debugging
         if (ctx.performed) Debug.Log("[EchoInput] SwitchView pressed");
     }
 }
+}

@@ -4,7 +4,6 @@ using UnityEngine.Scripting.APIUpdating;
 using Game.Player;
 using Game.Perspective;
 
-[MovedFrom("POC.Input")]
 namespace Game.Input
 {
     /// <summary>

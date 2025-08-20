@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.Scripting.APIUpdating;
 
-[MovedFrom("POC.Camera")]
 namespace Game.Camera
 {
     // - Only moves along Y

@@ -5,7 +5,6 @@ using Game.Player;
 using Game.Projection;
 using Game.Physics;
 
-[MovedFrom("POC.GameplayProjection")]
 namespace Game.Perspective
 {
     /// <summary>

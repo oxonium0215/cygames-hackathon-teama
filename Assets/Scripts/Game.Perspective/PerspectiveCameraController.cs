@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.Scripting.APIUpdating;
 
-[MovedFrom("POC.GameplayProjection")]
 namespace Game.Perspective
 {
     /// <summary>
