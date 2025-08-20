@@ -43,17 +43,14 @@ namespace POC.GameplayProjection
         [SerializeField] private bool fixYDuringRotation = true;
         [Tooltip("If overlapping during rotation, try to lift upward until clear (uses vertical-only depenetration).")]
         [SerializeField] private bool resolveVerticalOverlapDuringRotation = true;
+        [Tooltip("If true, snap the player down to the ground after rotation (vertical velocity will be zeroed). Default: false.")]
+        [SerializeField] private bool snapToGroundAfterRotation = false;
 
         [Header("Penetration Resolve (advanced)")]
-        [Tooltip("Max iterations per resolve phase (during/after rotation).")]
         [SerializeField, Min(1)] private int penetrationResolveIterations = 6;
-        [Tooltip("Extra upward skin added after each resolve to ensure clear separation.")]
         [SerializeField, Range(0.0001f, 0.02f)] private float penetrationSkin = 0.003f;
-        [Tooltip("OverlapBox inflation relative to bounds extents (0.98 = slightly smaller).")]
         [SerializeField, Range(0.8f, 1.2f)] private float overlapBoxInflation = 0.98f;
-        [Tooltip("Clamp for a single upward step (world units) to avoid huge teleports.")]
         [SerializeField, Range(0.05f, 5f)] private float maxResolveStep = 2.0f;
-        [Tooltip("Clamp for the total upward distance moved in one resolve call.")]
         [SerializeField, Range(0.1f, 20f)] private float maxResolveTotal = 8.0f;
 
         [SerializeField] private int viewIndex = 0; // 0=A, 1=B
@@ -109,83 +106,88 @@ namespace POC.GameplayProjection
                 yield break;
             }
 
-            // Capture pre-rotation velocity
+            // Capture pre-rotation velocity (read ok even if kinematic)
             Vector3 preVel = playerRb ? playerRb.linearVelocity : Vector3.zero;
 
-            // Freeze motor (no gravity/inertia) and disable movement input
+            // Freeze motor and input
             player.BeginRotationFreeze();
             if (jumpOnlyDuringSwitch) player.SetLateralEnabled(false);
 
-            // Make kinematic during rotation (constraints owned by PlayerMotor)
+            // Make kinematic during rotation (avoid writing velocities while kinematic)
             bool originalKinematic = false;
             if (playerRb && makePlayerKinematicDuringSwitch)
             {
-                // Store original state first
                 originalKinematic = playerRb.isKinematic;
-
-                // IMPORTANT: Only touch velocities while non-kinematic to avoid warnings.
                 if (!originalKinematic)
                 {
                     playerRb.linearVelocity = Vector3.zero;
                     playerRb.angularVelocity = Vector3.zero;
                     playerRb.isKinematic = true;
-                } else
-                {
-                    // Already kinematic: do NOT set velocities (would warn).
                 }
             }
 
             // Rotation setup
-            float startY = cameraPivot.eulerAngles.y;
-            float targetY = (nextIndex == 0) ? viewAYaw : viewBYaw;
-            float deltaYaw = Mathf.DeltaAngle(startY, targetY);
+            float startYaw = cameraPivot.eulerAngles.y;
+            float targetYaw = (nextIndex == 0) ? viewAYaw : viewBYaw;
+            float deltaYaw = Mathf.DeltaAngle(startYaw, targetYaw);
 
-            Vector3 centerPos = rotationCenter ? rotationCenter.position : cameraPivot.position - pivotOffset;
+            ProjectionAxis startAxis = GetProjectionForCurrent();
             Vector3 pStart = playerTransform.position;
-            float fixedY = pStart.y; // baseline Y to keep (may increase if we detect overlap)
+            float fixedY = pStart.y;
 
-            // Seam (edge line): clamp Z for XY->ZY, clamp X for ZY->XY
             float seamZ = projectionBuilder.GetPlaneZ();
             float seamX = projectionBuilder.GetPlaneX();
-            bool clampZDuringRotation = (GetProjectionForCurrent() == ProjectionAxis.FlattenZ);
 
-            // Rotate camera (and player), clamp seam axis and maintain/raise Y each frame
+            // Inverse-of-projection lateral coordinates (constant during rotation)
+            float preX = pStart.x;
+            float preZ = pStart.z;
+            float xInv, zInv;
+
+            if (startAxis == ProjectionAxis.FlattenZ)
+            {
+                // XY -> ZY: xInv = preX, zInv = -preX
+                xInv = preX;
+                zInv = -preX;
+            } else
+            {
+                // ZY -> XY: xInv = -preZ, zInv = preZ
+                xInv = -preZ;
+                zInv = preZ;
+            }
+
+            // Rotate camera; place player at inverse-projection coordinates every frame
             float t = 0f;
             while (t < 1f)
             {
                 t += Time.deltaTime / Mathf.Max(0.0001f, rotateDuration);
-                float eased = rotateEase.Evaluate(Mathf.Clamp01(t));
-                float y = Mathf.LerpAngle(startY, startY + deltaYaw, eased);
+                float s = rotateEase.Evaluate(Mathf.Clamp01(t));
 
+                // Camera yaw
                 var eul = cameraPivot.eulerAngles;
-                eul.y = y;
+                eul.y = Mathf.LerpAngle(startYaw, startYaw + deltaYaw, s);
                 cameraPivot.eulerAngles = eul;
 
                 if (rotatePlayerDuringSwitch)
                 {
-                    Quaternion rot = Quaternion.Euler(0f, deltaYaw * eased, 0f);
-                    Vector3 rel = pStart - centerPos;
-                    Vector3 rotated = rot * rel;
-                    Vector3 p = centerPos + rotated;
+                    var p = playerTransform.position;
+                    p.x = xInv;
+                    p.z = zInv;
                     if (fixYDuringRotation) p.y = fixedY;
                     playerTransform.position = p;
-                }
 
-                // Clamp seam and Y regardless
+                    // Resolve vertical overlaps while rotating
+                    if (resolveVerticalOverlapDuringRotation && playerCollider)
+                    {
+                        if (ResolveVerticalOverlapUpwards(iterations: penetrationResolveIterations, conservativeFallback: false))
+                        {
+                            fixedY = Mathf.Max(fixedY, playerTransform.position.y);
+                        }
+                    }
+                } else if (fixYDuringRotation)
                 {
                     var p = playerTransform.position;
-                    if (fixYDuringRotation) p.y = fixedY;
-                    if (clampZDuringRotation) p.z = seamZ; else p.x = seamX;
+                    p.y = fixedY;
                     playerTransform.position = p;
-                }
-
-                // If overlapping ground at this fixed Y, lift vertically until clear (handles side/middle/bottom overlaps)
-                if (resolveVerticalOverlapDuringRotation && playerCollider)
-                {
-                    if (ResolveVerticalOverlapUpwards(iterations: penetrationResolveIterations, conservativeFallback: false))
-                    {
-                        fixedY = Mathf.Max(fixedY, playerTransform.position.y);
-                    }
                 }
 
                 yield return null;
@@ -196,57 +198,67 @@ namespace POC.GameplayProjection
             RebuildForCurrentView();
             projectionBuilder.SetSourcesVisible(false);
 
-            // Lock to new plane continuously (PlayerMotor handles constraints internally)
+            // Final mapped position on target plane
+            {
+                var p = playerTransform.position;
+                if (startAxis == ProjectionAxis.FlattenZ)
+                {
+                    p.x = seamX;
+                    p.z = -preX;
+                } else
+                {
+                    p.x = -preZ;
+                    p.z = seamZ;
+                }
+                playerTransform.position = p;
+            }
+
+            // Lock to new plane
             var nextAxis = GetProjectionForCurrent();
             float planeConst = (nextAxis == ProjectionAxis.FlattenZ) ? seamZ : seamX;
             player.ActivePlane = (nextAxis == ProjectionAxis.FlattenZ) ? MovePlane.X : MovePlane.Z;
             player.SetPlaneLock(player.ActivePlane, planeConst);
 
-            // Snap to ground (typical case)
-            bool snappedToGround = SnapPlayerToGround();
-
-            // After-rotation: resolve any residual overlaps by lifting up until fully clear
+            // Post-rotation handling
+            bool snappedToGround = false;
+            if (snapToGroundAfterRotation)
+            {
+                snappedToGround = SnapPlayerToGround();
+            }
             bool liftedPost = ResolveVerticalOverlapUpwards(iterations: penetrationResolveIterations, conservativeFallback: true);
-            if (liftedPost) snappedToGround = true; // keep vertical velocity zero
 
             // Restore kinematic state
             if (playerRb && makePlayerKinematicDuringSwitch)
             {
-                // Return to original state before applying final velocity
                 playerRb.isKinematic = originalKinematic;
             }
 
-            // Re-enable movement input
+            // Re-enable input
             if (jumpOnlyDuringSwitch) player.SetLateralEnabled(true);
 
-            // Restore inertia: rotate pre-rotation lateral vector into the new axis
-            Vector3 preVelXZ = new Vector3(preVel.x, 0f, preVel.z);
-            Vector3 rotatedXZ = Quaternion.Euler(0f, deltaYaw, 0f) * preVelXZ;
-            float newLateral = (nextAxis == ProjectionAxis.FlattenZ) ? rotatedXZ.x : rotatedXZ.z;
+            // Map inertia: preserve lateral direction (no sign flip), preserve vertical velocity
+            float preLateral = (startAxis == ProjectionAxis.FlattenZ) ? preVel.x : preVel.z;
+            float newLateral = preLateral; // CHANGED: keep direction
 
             Vector3 vFinal = Vector3.zero;
             if (nextAxis == ProjectionAxis.FlattenZ) vFinal.x = newLateral; else vFinal.z = newLateral;
-            vFinal.y = snappedToGround ? 0f : preVel.y;
 
-            // Only set velocity if the body is non-kinematic (avoids warnings)
+            // Preserve vertical velocity for natural fall
+            vFinal.y = preVel.y;
+            if (snapToGroundAfterRotation && snappedToGround) vFinal.y = 0f;
+
             if (playerRb && !playerRb.isKinematic)
             {
                 playerRb.linearVelocity = vFinal;
             }
 
-            // Unfreeze motor (gravity/inertia resume next physics step)
+            // Unfreeze motor
             player.EndRotationFreeze();
 
             rotating = false;
         }
 
-        // Vertical-only overlap resolution:
-        // - Uses OverlapBox to find intersecting colliders (groundMask)
-        // - For each overlap, uses ComputePenetration to find separation dir/dist
-        // - Computes the upward distance k required so that moving only along +Y separates:
-        //      k >= dist / |dot(dir, up)|  (with epsilon to avoid division by 0)
-        // - Caps per-step and total movement; repeats up to 'iterations'
-        // - If still overlapping and conservativeFallback==true, lifts above the highest top face among overlaps
+        // Vertical-only overlap resolution (upward depenetration).
         private bool ResolveVerticalOverlapUpwards(int iterations, bool conservativeFallback)
         {
             if (!playerCollider) return false;
@@ -276,8 +288,6 @@ namespace POC.GameplayProjection
                         if (dist <= 0f) continue;
 
                         float upCompAbs = Mathf.Abs(Vector3.Dot(dir.normalized, Vector3.up));
-                        // If up component is tiny (side/bottom overlap), taking 1/upComp blows up
-                        // We clamp per-step and rely on iteration to converge
                         float step = (upCompAbs > 0.0001f) ? (dist / upCompAbs) : maxResolveStep;
 
                         step = Mathf.Clamp(step, penetrationSkin, maxResolveStep);
@@ -287,7 +297,6 @@ namespace POC.GameplayProjection
 
                 if (!hadOverlap) break;
 
-                // Also cap total movement
                 if (movedTotal + requiredUp > maxResolveTotal)
                     requiredUp = Mathf.Max(0f, maxResolveTotal - movedTotal);
 
@@ -303,7 +312,6 @@ namespace POC.GameplayProjection
                 movedTotal += requiredUp + penetrationSkin;
             }
 
-            // Conservative fallback: lift above the tallest overlapped collider's top face
             if (conservativeFallback)
             {
                 var overlaps = OverlapGroundAtPlayer();
@@ -324,7 +332,6 @@ namespace POC.GameplayProjection
                         float delta = (targetMinY - myB.min.y);
                         if (delta > 0f)
                         {
-                            // Also obey maxResolveTotal so we don't teleport too far
                             delta = Mathf.Min(delta, Mathf.Max(0f, maxResolveTotal));
                             var p = playerTransform.position;
                             p.y += delta;
@@ -350,7 +357,7 @@ namespace POC.GameplayProjection
             return Physics.OverlapBox(
                 center,
                 halfExtents,
-                playerTransform.rotation, // align box to player rotation for tighter query
+                playerTransform.rotation,
                 groundMask,
                 QueryTriggerInteraction.Ignore
             );
@@ -397,8 +404,8 @@ namespace POC.GameplayProjection
             if (axis == ProjectionAxis.FlattenZ) p.z = planeConst; else p.x = planeConst;
             playerTransform.position = p;
 
+            // For initial placement it's okay to snap to ground to avoid starting inside geometry.
             SnapPlayerToGround();
-            // Resolve any starting overlap as well
             ResolveVerticalOverlapUpwards(iterations: penetrationResolveIterations, conservativeFallback: true);
         }
 
@@ -449,5 +456,4 @@ namespace POC.GameplayProjection
             return false;
         }
     }
-
 }

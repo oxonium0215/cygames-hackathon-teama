@@ -84,31 +84,26 @@ namespace POC.Gameplay
 
         public void SetLateralEnabled(bool enabled) => lateralEnabled = enabled;
 
-        // Project player to a plane (axis/value)
         public void SetPlaneLock(MovePlane axis, float planeConst)
         {
             planeLockEnabled = true;
             planeLockAxis = axis;
             planeLockValue = planeConst;
             ApplyAxisConstraints();
-            // Immediate clamp
             var p = transform.position;
             if (axis == MovePlane.X) p.z = planeConst; else p.x = planeConst;
             transform.position = p;
         }
 
-        // Called by manager at the start/end of a camera rotation
         public void BeginRotationFreeze()
         {
             rotationFrozen = true;
-            // Disable lateral during rotation (input router also disables, this is a safeguard)
             lateralEnabled = false;
         }
 
         public void EndRotationFreeze()
         {
             rotationFrozen = false;
-            // Do not automatically re-enable lateral; manager does that after applying inertia
         }
 
         private void Awake()
@@ -141,7 +136,7 @@ namespace POC.Gameplay
 
         public void QueueJump()
         {
-            if (rotationFrozen) return; // ignore jumps while frozen
+            if (rotationFrozen) return;
             jumpQueued = true;
             jumpHeld = true;
             jumpBufferTimer = jumpBufferTime;
@@ -150,7 +145,6 @@ namespace POC.Gameplay
         public void JumpCanceled()
         {
             if (rotationFrozen) return;
-            jumpHeld = false;
             var v = rb.linearVelocity;
             if (v.y > 0f)
             {
@@ -165,11 +159,9 @@ namespace POC.Gameplay
 
             if (rotationFrozen)
             {
-                // Pause timers while frozen so behavior resumes exactly after rotation
                 return;
             }
 
-            // Timers
             if (IsGrounded) lastGroundedTimer = coyoteTime;
             else lastGroundedTimer -= Time.deltaTime;
 
@@ -178,6 +170,9 @@ namespace POC.Gameplay
 
         private void FixedUpdate()
         {
+            // IMPORTANT: do nothing while rotating; the manager drives transform/overlaps.
+            if (rotationFrozen) return;
+
             // Keep on plane always
             if (planeLockEnabled)
             {
@@ -186,7 +181,6 @@ namespace POC.Gameplay
                 {
                     if (!Mathf.Approximately(pos.z, planeLockValue))
                         rb.position = new Vector3(pos.x, pos.y, planeLockValue);
-                    // Kill velocity on locked axis
                     if (Mathf.Abs(rb.linearVelocity.z) > 0f)
                         rb.linearVelocity = new Vector3(rb.linearVelocity.x, rb.linearVelocity.y, 0f);
                 } else
@@ -200,12 +194,6 @@ namespace POC.Gameplay
 
             // Ground check each step
             IsGrounded = Physics.CheckSphere(groundCheck.position, groundCheckRadius, groundMask, QueryTriggerInteraction.Ignore);
-
-            if (rotationFrozen)
-            {
-                // Do not integrate gravity or inertia while frozen
-                return;
-            }
 
             var v = rb.linearVelocity;
 
@@ -299,7 +287,7 @@ namespace POC.Gameplay
             rb.constraints = constraints;
         }
 
-        // Utilities for the manager
+        // Utilities
         public float GetLateralSpeed()
         {
             var v = rb.linearVelocity;
@@ -313,5 +301,4 @@ namespace POC.Gameplay
             rb.linearVelocity = v;
         }
     }
-
 }
