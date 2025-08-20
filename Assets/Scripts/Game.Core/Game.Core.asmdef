@@ -6,6 +6,8 @@
         "Game.Camera",
         "Game.Input",
         "Game.Projection",
+        "Game.Perspective", 
+        "Game.Physics",
         "Game.Debugging"
     ],
     "includePlatforms": [],

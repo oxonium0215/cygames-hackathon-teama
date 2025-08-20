@@ -2,24 +2,38 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Scripting.APIUpdating;
 using Game.Player;
-using Game.Projection;
+using Game.Perspective;
 
 [MovedFrom("POC.Input")]
 namespace Game.Input
 {
-    // Routes UnityEvents from PlayerInput to gameplay components
+    /// <summary>
+    /// Simplified input router that delegates to appropriate systems.
+    /// Focused purely on input routing without complex logic.
+    /// </summary>
     [MovedFrom("POC.Input")]
     public class PlayerInputRouter : MonoBehaviour
     {
+        [Header("System References")]
         [SerializeField] private PlayerMotor motor;
-        [SerializeField] private PerspectiveProjectionManager perspective;
+        [SerializeField] private ViewSwitchCoordinator viewSwitchCoordinator;
+
+        [Header("Legacy Support")]
+        [SerializeField] private PerspectiveProjectionManager legacyPerspectiveManager;
+
+        private void Awake()
+        {
+            // Auto-find components if not assigned
+            if (!motor) motor = FindFirstObjectByType<PlayerMotor>();
+            if (!viewSwitchCoordinator) viewSwitchCoordinator = FindFirstObjectByType<ViewSwitchCoordinator>();
+            if (!legacyPerspectiveManager) legacyPerspectiveManager = FindFirstObjectByType<PerspectiveProjectionManager>();
+        }
 
         public void OnMove(InputAction.CallbackContext ctx)
         {
             motor?.SetMove(ctx.ReadValue<Vector2>());
         }
 
-        // Handles both performed and canceled so jump-cut works
         public void OnJump(InputAction.CallbackContext ctx)
         {
             if (ctx.performed) motor?.QueueJump();
@@ -28,7 +42,21 @@ namespace Game.Input
 
         public void OnSwitchView(InputAction.CallbackContext ctx)
         {
-            if (ctx.performed) perspective?.TogglePerspective();
+            if (!ctx.performed) return;
+
+            // Prefer new ViewSwitchCoordinator over legacy system
+            if (viewSwitchCoordinator)
+            {
+                viewSwitchCoordinator.TogglePerspective();
+            }
+            else if (legacyPerspectiveManager)
+            {
+                legacyPerspectiveManager.TogglePerspective();
+            }
+            else
+            {
+                Debug.LogWarning("[PlayerInputRouter] No view switching system found. Please assign ViewSwitchCoordinator or PerspectiveProjectionManager.");
+            }
         }
     }
 }

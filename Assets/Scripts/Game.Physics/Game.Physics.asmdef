@@ -1,11 +1,7 @@
 {
-    "name": "Game.Input",
-    "rootNamespace": "Game.Input",
-    "references": [
-        "Unity.InputSystem",
-        "Game.Player",
-        "Game.Perspective"
-    ],
+    "name": "Game.Physics",
+    "rootNamespace": "Game.Physics",
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
