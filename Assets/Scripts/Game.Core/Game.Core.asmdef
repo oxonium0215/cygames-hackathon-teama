@@ -1,7 +1,13 @@
 {
     "name": "Game.Core",
     "rootNamespace": "Game.Core",
-    "references": [],
+    "references": [
+        "Game.Player",
+        "Game.Camera",
+        "Game.Input",
+        "Game.Projection",
+        "Game.Debugging"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
