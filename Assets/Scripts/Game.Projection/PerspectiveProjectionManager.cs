@@ -7,7 +7,7 @@ using Game.Player;
 namespace Game.Projection
 {
     [MovedFrom(true, sourceNamespace: "POC.GameplayProjection")]
-    public class PerspectiveProjectionManager : MonoBehaviour
+    public partial class PerspectiveProjectionManager : MonoBehaviour
     {
         [Header("References")]
         [SerializeField] private Transform rotationCenter;
