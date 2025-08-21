@@ -97,4 +97,4 @@ The camera uses a service-based architecture with `ICameraProjectionAdapter`:
 - Camera pivot yaw is interpolated smoothly during perspective switches using the configured easing curve
 - The pivot is repositioned to the rotation center with applied offset before each switch
 - Child camera is positioned at the configured distance along the local forward axis
-- All values shown reflect the current RotationPOC scene configuration
+- All values shown reflect the current scene configuration
