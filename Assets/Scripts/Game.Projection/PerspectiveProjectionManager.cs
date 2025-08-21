@@ -59,7 +59,7 @@ namespace Game.Projection
         private Rigidbody playerRb;
         
         // Services
-        private IProjectionController projectionController;
+        private ProjectionController projectionController;
         private IPlayerProjectionAdapter playerAdapter;
         private ICameraProjectionAdapter cameraAdapter;
         private IDepenetrationSolver depenetrationSolver;

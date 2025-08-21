@@ -5,7 +5,7 @@ namespace Game.Projection
     /// <summary>
     /// Pure C# implementation of projection switching state and timing.
     /// </summary>
-    public class ProjectionController : IProjectionController
+    public class ProjectionController
     {
         private float rotationTimer;
         private float rotationDuration;
