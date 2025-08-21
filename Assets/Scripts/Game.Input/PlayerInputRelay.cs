@@ -13,16 +13,39 @@ namespace Game.Input
         [SerializeField] private PlayerMotor motor;
         [SerializeField] private PerspectiveProjectionManager perspective;
 
+        private UnityPlayerInput playerInput;
+
+        private void Awake()
+        {
+            playerInput = new UnityPlayerInput();
+        }
+
+        private void Update()
+        {
+            // Clear transient flags once per frame
+            playerInput?.ClearTransient();
+        }
+
         public void OnMove(InputAction.CallbackContext ctx)
         {
-            motor?.SetMove(ctx.ReadValue<Vector2>());
+            Vector2 moveValue = ctx.ReadValue<Vector2>();
+            playerInput?.SetMove(moveValue);
+            motor?.SetMove(moveValue);
         }
 
         // Handles both performed and canceled so jump-cut works
         public void OnJump(InputAction.CallbackContext ctx)
         {
-            if (ctx.performed) motor?.QueueJump();
-            else if (ctx.canceled) motor?.JumpCanceled();
+            if (ctx.performed)
+            {
+                playerInput?.OnJumpPerformed();
+                motor?.QueueJump();
+            }
+            else if (ctx.canceled)
+            {
+                playerInput?.OnJumpCanceled();
+                motor?.JumpCanceled();
+            }
         }
 
         public void OnSwitchView(InputAction.CallbackContext ctx)
