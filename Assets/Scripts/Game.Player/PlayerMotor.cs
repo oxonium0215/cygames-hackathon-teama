@@ -11,7 +11,7 @@ namespace Game.Player
     public class PlayerMotor : MonoBehaviour
     {
         [Header("Movement (Inertia)")]
-        [SerializeField] private float maxRunSpeed = 7f;
+        [SerializeField] private float maxRunSpeed = 9f; // Updated to match RotationPOC.unity
         [SerializeField] private float groundAcceleration = 80f;
         [SerializeField] private float airAcceleration = 40f;
         [SerializeField] private float groundDeceleration = 60f;
@@ -24,7 +24,7 @@ namespace Game.Player
         [SerializeField] private float jumpBufferTime = 0.1f;
 
         [Header("Gravity")]
-        [SerializeField] private float gravity = -30f;
+        [SerializeField] private float gravity = -40f; // Updated to match RotationPOC.unity
         [SerializeField] private float groundStickForce = 5f;
 
         [Header("Landing Slide")]
@@ -36,7 +36,7 @@ namespace Game.Player
 
         [Header("Ground Check")]
         [SerializeField] private Transform groundCheck;
-        [SerializeField] private float groundCheckRadius = 0.15f;
+        [SerializeField] private float groundCheckRadius = 0.2f; // Updated to match RotationPOC.unity
         [SerializeField] private LayerMask groundMask;
         [SerializeField] private float groundCheckSkin = 0.02f;
         [SerializeField] private bool autoSizeGroundCheck = true;
