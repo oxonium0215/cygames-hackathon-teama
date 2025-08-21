@@ -35,14 +35,26 @@ namespace Game.Camera
         float _maxPivotY;
         float _velY; // for SmoothDamp
 
+        // Pure utilities (façade pattern)
+        private IDeadZone _deadZonePolicy;
+        private ISmoothing _constantSpeedSmoothing;
+
         void Awake()
         {
             _maxPivotY = transform.position.y;
+            
+            // Initialize pure utilities
+            _deadZonePolicy = new TopDeadZonePolicy(topDeadZone);
+            _constantSpeedSmoothing = new ConstantSpeedSmoothing(upSpeed);
         }
 
         void LateUpdate()
         {
             if (!followTarget) return;
+
+            // Reinitialize utilities if parameters changed
+            _deadZonePolicy = new TopDeadZonePolicy(topDeadZone);
+            _constantSpeedSmoothing = new ConstantSpeedSmoothing(upSpeed);
 
             // Downward scrolling off
             var pos = transform.position;
@@ -52,15 +64,15 @@ namespace Game.Camera
                 transform.position = pos;
             }
 
-            // Check if player is above the top dead zone
+            // Check if player is above the top dead zone using dead zone policy
             float pivotY = transform.position.y;
             float playerY = followTarget.position.y;
-            float thresholdY = pivotY + topDeadZone;
+            float thresholdY = _deadZonePolicy.ComputeThreshold(pivotY);
 
             if (playerY > thresholdY)
             {
                 // Desired Y keeps the player exactly at the top edge of the dead zone
-                float desiredY = playerY - topDeadZone;
+                float desiredY = _deadZonePolicy.ComputeDesiredY(playerY);
                 float newY;
 
                 if (useSmoothDamp)
@@ -70,8 +82,7 @@ namespace Game.Camera
                     if (neverScrollDown) newY = Mathf.Max(newY, pivotY);
                 } else
                 {
-                    float step = upSpeed * Time.deltaTime;
-                    newY = Mathf.MoveTowards(pivotY, desiredY, step);
+                    newY = _constantSpeedSmoothing.ComputeNewY(pivotY, desiredY, Time.deltaTime);
                 }
 
                 // Enforce upward-only rule
