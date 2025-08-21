@@ -1,13 +1,11 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Scripting.APIUpdating;
 using Game.Player;
 using Game.Projection;
 
 namespace Game.Input
 {
     // Routes UnityEvents from PlayerInput to gameplay components
-    [MovedFrom(true, sourceNamespace: "POC.Input", sourceClassName: "PlayerInputRouter")]
     public class PlayerInputRelay : MonoBehaviour
     {
         [Tooltip("PlayerMotor component that receives movement and jump commands.")]

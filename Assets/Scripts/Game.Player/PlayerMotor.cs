@@ -1,17 +1,14 @@
 using UnityEngine;
-using UnityEngine.Scripting.APIUpdating;
 
 namespace Game.Player
 {
-    [MovedFrom(true, sourceNamespace: "POC.Gameplay")]
     public enum MovePlane { X, Z }
 
     [RequireComponent(typeof(Rigidbody), typeof(Collider))]
-    [MovedFrom(true, sourceNamespace: "POC.Gameplay")]
     public partial class PlayerMotor : MonoBehaviour
     {
         [Header("Movement (Inertia)")]
-        [SerializeField] private float maxRunSpeed = 9f; // Updated to match RotationPOC.unity
+        [SerializeField] private float maxRunSpeed = 9f;
         [SerializeField] private float groundAcceleration = 80f;
         [SerializeField] private float airAcceleration = 40f;
         [SerializeField] private float groundDeceleration = 60f;
@@ -24,7 +21,7 @@ namespace Game.Player
         [SerializeField] private float jumpBufferTime = 0.1f;
 
         [Header("Gravity")]
-        [SerializeField] private float gravity = -40f; // Updated to match RotationPOC.unity
+        [SerializeField] private float gravity = -40f;
         [SerializeField] private float groundStickForce = 5f;
 
         [Header("Landing Slide")]
@@ -36,7 +33,7 @@ namespace Game.Player
 
         [Header("Ground Check")]
         [SerializeField] private Transform groundCheck;
-        [SerializeField] private float groundCheckRadius = 0.2f; // Updated to match RotationPOC.unity
+        [SerializeField] private float groundCheckRadius = 0.2f;
         [SerializeField] private LayerMask groundMask;
         [SerializeField] private float groundCheckSkin = 0.02f;
         [SerializeField] private bool autoSizeGroundCheck = true;

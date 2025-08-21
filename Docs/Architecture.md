@@ -12,7 +12,7 @@ This document describes the modernized codebase organization implemented in Phas
 - Introduced interfaces for clean service boundaries
 - Manual composition pattern (no DI framework)
 - EditMode tests for extracted services
-- Normalized script defaults to match RotationPOC.unity values
+- Normalized script defaults to match scene configuration
 
 ### Service Architecture
 
@@ -72,29 +72,20 @@ All services use concrete types for simplicity and clarity:
 - **ProjectionControllerTests**: State transitions, progress calculation, timing
 - **DepenetrationSolverTests**: Upward resolution, iteration caps, layer filtering
 
-## Namespace Migration
+## Namespace Organization
 
-The codebase has been migrated from `POC.*` namespaces to clearer `Game.*` domains:
+The codebase is organized into clear `Game.*` domains:
 
-### Namespace Mapping
+### Current Namespace Structure
 
-| Old Namespace | New Namespace | Changes |
-|---------------|---------------|---------|
-| `POC.Input` | `Game.Input` | PlayerInputRouter → PlayerInputRelay |
-| `POC.Gameplay` | `Game.Player` | Class names unchanged (PlayerMotor, MovePlane) |
-| `POC.GameplayProjection` | `Game.Projection` | Class names unchanged (PerspectiveProjectionManager) |
-| `POC.Level` | `Game.Level` | ProjectionBuilder → GeometryProjector |
-| `POC.Camera` | `Game.Camera` | VerticalCameraTracker → VerticalCameraFollow |
-| (Debug classes) | `Game.Debugging` | EchoInput moved to proper namespace |
-
-### Serialization Preservation
-
-All moved and renamed classes use `[MovedFrom]` attributes to preserve serialized references in existing scenes and prefabs:
-
-```csharp
-[MovedFrom(true, sourceNamespace: "POC.Input", sourceClassName: "PlayerInputRouter")]
-public class PlayerInputRelay : MonoBehaviour
-```
+| Namespace | Purpose | Key Classes |
+|-----------|---------|-------------|
+| `Game.Input` | Input handling | PlayerInputRelay |
+| `Game.Player` | Player movement, physics | PlayerMotor, MovePlane |
+| `Game.Projection` | Perspective switching logic | PerspectiveProjectionManager |
+| `Game.Level` | Level geometry, projection | GeometryProjector |
+| `Game.Camera` | Camera systems | VerticalCameraFollow |
+| `Game.Debugging` | Debug utilities | EchoInput |
 
 ## Assembly Definition Structure
 
@@ -139,8 +130,8 @@ Assets/Scripts/
 
 ## Project Settings Updates
 
-- **Product Name**: Changed from "cygames_POC_rotation" to "CygamesHackathon"
-- **Metro Package Name**: Changed from "cygames_POC_rotation" to "CygamesHackathon"
+- **Product Name**: "CygamesHackathon"
+- **Metro Package Name**: "CygamesHackathon"
 
 ## Phase 1 Constraints
 
@@ -197,7 +188,7 @@ This phase introduced a façade pattern to extract pure utilities from MonoBehav
 ### Defaults Normalization
 
 Script field initializers updated to match scene-tuned values:
-- **VerticalCameraFollow**: All defaults already matched RotationPOC scene
+- **VerticalCameraFollow**: All defaults already matched scene configuration
 - **GeometryProjector**: Updated planeZOffset (-8.5f) and planeXOffset (8.5f) to match scene values
 
 ## Phase 2C: Simplified Input Path with Minimal Adapter
@@ -249,8 +240,8 @@ Future improvements will include:
 
 ## Verification
 
-To verify Phase 1 + 2B + 2C:
-1. Open `Scenes/RotationPOC.unity`
+To verify the current implementation:
+1. Open the main scene
 2. Confirm console is clean (no missing scripts)
 3. Test player movement, jumping, and perspective switching
 4. **Verify camera behavior identical**: dead-zone, upward-only scrolling, smooth/constant speed options
@@ -258,5 +249,5 @@ To verify Phase 1 + 2B + 2C:
 6. **Verify input behavior identical**: move, jump, jump-cut, and view switching work exactly as before
 7. Verify URP pipeline and input systems still work correctly
 8. Check Project Settings show "CygamesHackathon" for both Product Name and UWP Package Name
-9. **Test defaults**: Create new scene, add VerticalCameraFollow + GeometryProjector, verify inspector values match RotationPOC
+9. **Test defaults**: Create new scene, add VerticalCameraFollow + GeometryProjector, verify inspector values
 10. **Note**: EditMode tests were removed in Phase 2C for project simplicity

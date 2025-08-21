@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.Scripting.APIUpdating;
 
 namespace Game.Camera
 {
@@ -7,7 +6,6 @@ namespace Game.Camera
     // - Moves up when the player exceeds a top dead zone window
     // - Never moves down (keeps the highest Y reached)
     // - Optional smoothing
-    [MovedFrom(true, sourceNamespace: "POC.Camera", sourceClassName: "VerticalCameraTracker")]
     public partial class VerticalCameraFollow : MonoBehaviour
     {
         [Header("Follow")]

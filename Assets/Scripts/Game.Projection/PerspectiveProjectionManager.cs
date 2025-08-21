@@ -1,12 +1,10 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.Scripting.APIUpdating;
 using Game.Level;
 using Game.Player;
 
 namespace Game.Projection
 {
-    [MovedFrom(true, sourceNamespace: "POC.GameplayProjection")]
     public class PerspectiveProjectionManager : MonoBehaviour
     {
         [Header("References")]
@@ -18,17 +16,17 @@ namespace Game.Projection
         [SerializeField] private Collider playerCollider; // used to resolve overlaps
 
         [Header("Camera")]
-        [SerializeField] private float cameraDistance = 15f; // Updated to match RotationPOC.unity
+        [SerializeField] private float cameraDistance = 15f;
         [SerializeField] private Vector3 pivotOffset = Vector3.zero;
 
         [Header("Views")]
         [SerializeField] private float viewAYaw = 0f;
-        [SerializeField] private float viewBYaw = -90f; // Updated to match RotationPOC.unity
+        [SerializeField] private float viewBYaw = -90f;
         [SerializeField] private Game.Level.ProjectionAxis viewAProjection = Game.Level.ProjectionAxis.FlattenZ; // XY
         [SerializeField] private Game.Level.ProjectionAxis viewBProjection = Game.Level.ProjectionAxis.FlattenX; // ZY
 
         [Header("Rotation")]
-        [SerializeField] private float rotateDuration = 0.5f; // Updated to match RotationPOC.unity
+        [SerializeField] private float rotateDuration = 0.5f;
         [SerializeField] private AnimationCurve rotateEase = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
         [Header("Ground / Projection")]
@@ -48,8 +46,8 @@ namespace Game.Projection
         [SerializeField] private bool resolveVerticalOverlapDuringRotation = true;
 
         [Header("Penetration Resolve (advanced)")]
-        [SerializeField, Min(1)] private int penetrationResolveIterations = 3; // Updated to match RotationPOC.unity
-        [SerializeField, Range(0.0001f, 0.02f)] private float penetrationSkin = 0.0015f; // Updated to match RotationPOC.unity
+        [SerializeField, Min(1)] private int penetrationResolveIterations = 3;
+        [SerializeField, Range(0.0001f, 0.02f)] private float penetrationSkin = 0.0015f;
         [SerializeField, Range(0.8f, 1.2f)] private float overlapBoxInflation = 0.98f;
         [SerializeField, Range(0.05f, 5f)] private float maxResolveStep = 2.0f;
         [SerializeField, Range(0.1f, 20f)] private float maxResolveTotal = 8.0f;
