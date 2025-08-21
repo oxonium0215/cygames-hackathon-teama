@@ -14,9 +14,56 @@ namespace Game.Player
         [SerializeField] private GroundProbe groundProbe = new GroundProbe();
         [SerializeField] private PlaneMotion planeMotion = new PlaneMotion();
         [SerializeField] private JumpLogic jumpLogic = new JumpLogic();
+        
+        // Legacy fields - marked obsolete but kept for serialization compatibility  
+        [System.Obsolete("Deprecated; no longer used - moved to PlaneMotion service")]
+        [SerializeField] private float maxRunSpeed = 7f;
+        [System.Obsolete("Deprecated; no longer used - moved to PlaneMotion service")]
+        [SerializeField] private float groundAcceleration = 80f;
+        [System.Obsolete("Deprecated; no longer used - moved to PlaneMotion service")]
+        [SerializeField] private float airAcceleration = 40f;
+        [System.Obsolete("Deprecated; no longer used - moved to PlaneMotion service")]
+        [SerializeField] private float groundDeceleration = 60f;
+        [System.Obsolete("Deprecated; no longer used - moved to PlaneMotion service")]
+        [SerializeField] private float airDeceleration = 20f;
+        [System.Obsolete("Deprecated; no longer used - moved to JumpLogic service")]
+        [SerializeField] private float jumpHeight = 3.5f;
+        [System.Obsolete("Deprecated; no longer used - moved to JumpLogic service")]
+        [Range(0.1f, 1f)][SerializeField] private float jumpCutMultiplier = 0.5f;
+        [System.Obsolete("Deprecated; no longer used - moved to JumpLogic service")]
+        [SerializeField] private float coyoteTime = 0.1f;
+        [System.Obsolete("Deprecated; no longer used - moved to JumpLogic service")]
+        [SerializeField] private float jumpBufferTime = 0.1f;
+        [System.Obsolete("Deprecated; no longer used - moved to PlaneMotion service")]
+        [SerializeField] private float gravity = -30f;
+        [System.Obsolete("Deprecated; no longer used - moved to PlaneMotion service")]
+        [SerializeField] private float groundStickForce = 5f;
+        [System.Obsolete("Deprecated; no longer used - moved to JumpLogic service")]
+        [SerializeField] private bool enableLandingSlide = true;
+        [System.Obsolete("Deprecated; no longer used - moved to JumpLogic service")]
+        [SerializeField] private float landingSlideDuration = 0.18f;
+        [System.Obsolete("Deprecated; no longer used - moved to JumpLogic service")]
+        [SerializeField] private float landingMinFallSpeed = 2.0f;
+        [System.Obsolete("Deprecated; no longer used - moved to JumpLogic service")]
+        [Range(0.1f, 1f)][SerializeField] private float landingDecelMultiplier = 0.35f;
+        [System.Obsolete("Deprecated; no longer used - moved to JumpLogic service")]
+        [Range(0.3f, 1f)][SerializeField] private float landingAccelMultiplier = 0.7f;
+        [System.Obsolete("Deprecated; no longer used - moved to GroundProbe service")]
+        [SerializeField] private Transform groundCheck;
+        [System.Obsolete("Deprecated; no longer used - moved to GroundProbe service")]
+        [SerializeField] private float groundCheckRadius = 0.15f;
+        [System.Obsolete("Deprecated; no longer used - moved to GroundProbe service")]
+        [SerializeField] private LayerMask groundMask;
+        [System.Obsolete("Deprecated; no longer used - moved to GroundProbe service")]
+        [SerializeField] private float groundCheckSkin = 0.02f;
+        [System.Obsolete("Deprecated; no longer used - moved to GroundProbe service")]
+        [SerializeField] private bool autoSizeGroundCheck = true;
 
         private Rigidbody rb;
         private Collider col;
+        
+        // Migration tracking
+        [SerializeField, HideInInspector] private bool hasDataMigrated = false;
 
         // Input/state
         private Vector2 moveInput;
@@ -63,6 +110,13 @@ namespace Game.Player
 
         private void Awake()
         {
+            // Migrate legacy data to services if not done yet
+            if (!hasDataMigrated)
+            {
+                MigrateObsoleteFieldsToServices();
+                hasDataMigrated = true;
+            }
+
             rb = GetComponent<Rigidbody>();
             col = GetComponent<Collider>();
 
@@ -152,6 +206,24 @@ namespace Game.Player
         public void SetLateralSpeed(float speed)
         {
             rb.linearVelocity = planeMotion.SetLateralSpeed(rb.linearVelocity, speed);
+        }
+        
+        private void MigrateObsoleteFieldsToServices()
+        {
+            #pragma warning disable CS0618 // Type or member is obsolete
+            // Migrate to PlaneMotion service
+            planeMotion.MigrateFrom(maxRunSpeed, groundAcceleration, airAcceleration, 
+                                   groundDeceleration, airDeceleration, gravity, groundStickForce);
+            
+            // Migrate to JumpLogic service
+            jumpLogic.MigrateFrom(jumpHeight, jumpCutMultiplier, coyoteTime, jumpBufferTime,
+                                 enableLandingSlide, landingSlideDuration, landingMinFallSpeed,
+                                 landingDecelMultiplier, landingAccelMultiplier);
+            
+            // Migrate to GroundProbe service  
+            groundProbe.MigrateFrom(groundCheck, groundCheckRadius, groundMask, 
+                                   groundCheckSkin, autoSizeGroundCheck);
+            #pragma warning restore CS0618 // Type or member is obsolete
         }
     }
 }

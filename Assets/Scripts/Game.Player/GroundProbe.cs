@@ -73,5 +73,15 @@ namespace Game.Player
             groundCheckRadius = Mathf.Clamp(groundCheckRadius, 0.01f, 1f);
             groundCheckSkin = Mathf.Clamp(groundCheckSkin, 0f, 0.2f);
         }
+        
+        public void MigrateFrom(Transform groundCheck, float groundCheckRadius, LayerMask groundMask, 
+                               float groundCheckSkin, bool autoSizeGroundCheck)
+        {
+            this.groundCheck = groundCheck;
+            this.groundCheckRadius = groundCheckRadius;
+            this.groundMask = groundMask;
+            this.groundCheckSkin = groundCheckSkin;
+            this.autoSizeGroundCheck = autoSizeGroundCheck;
+        }
     }
 }

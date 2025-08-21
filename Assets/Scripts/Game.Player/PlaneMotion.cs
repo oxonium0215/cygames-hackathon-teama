@@ -145,5 +145,17 @@ namespace Game.Player
             gravity = Mathf.Min(0f, gravity);
             groundStickForce = Mathf.Max(0f, groundStickForce);
         }
+        
+        public void MigrateFrom(float maxRunSpeed, float groundAcceleration, float airAcceleration, 
+                               float groundDeceleration, float airDeceleration, float gravity, float groundStickForce)
+        {
+            this.maxRunSpeed = maxRunSpeed;
+            this.groundAcceleration = groundAcceleration;
+            this.airAcceleration = airAcceleration;
+            this.groundDeceleration = groundDeceleration;
+            this.airDeceleration = airDeceleration;
+            this.gravity = gravity;
+            this.groundStickForce = groundStickForce;
+        }
     }
 }

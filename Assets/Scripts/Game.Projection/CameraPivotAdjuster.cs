@@ -55,5 +55,15 @@ namespace Game.Projection
             }
             return false;
         }
+        
+        public void MigrateFrom(float cameraDistance, Vector3 pivotOffset, float snapDownDistance, 
+                               float snapUpAllowance, float groundSkin)
+        {
+            this.cameraDistance = cameraDistance;
+            this.pivotOffset = pivotOffset;
+            this.snapDownDistance = snapDownDistance;
+            this.snapUpAllowance = snapUpAllowance;
+            this.groundSkin = groundSkin;
+        }
     }
 }

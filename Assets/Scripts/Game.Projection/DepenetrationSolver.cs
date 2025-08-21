@@ -121,5 +121,15 @@ namespace Game.Projection
                 QueryTriggerInteraction.Ignore
             );
         }
+        
+        public void MigrateFrom(int penetrationResolveIterations, float penetrationSkin, float overlapBoxInflation,
+                               float maxResolveStep, float maxResolveTotal)
+        {
+            this.penetrationResolveIterations = penetrationResolveIterations;
+            this.penetrationSkin = penetrationSkin;
+            this.overlapBoxInflation = overlapBoxInflation;
+            this.maxResolveStep = maxResolveStep;
+            this.maxResolveTotal = maxResolveTotal;
+        }
     }
 }

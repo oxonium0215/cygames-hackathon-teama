@@ -72,9 +72,19 @@ namespace Game.Projection
         [SerializeField] private int viewIndex = 0; // 0=A, 1=B
         private bool rotating;
         private Rigidbody playerRb;
+        
+        // Migration tracking
+        [SerializeField, HideInInspector] private bool hasDataMigrated = false;
 
         private void Start()
         {
+            // Migrate legacy data to services if not done yet
+            if (!hasDataMigrated)
+            {
+                MigrateObsoleteFieldsToServices();
+                hasDataMigrated = true;
+            }
+
             if (!projectionBuilder || !cameraPivot)
             {
                 Debug.LogError("[PerspectiveProjectionManager] Missing GeometryProjector or CameraPivot.");
@@ -272,6 +282,23 @@ namespace Game.Projection
         private void RebuildForCurrentView()
         {
             projectionBuilder.Rebuild(GetProjectionForCurrent());
+        }
+        
+        private void MigrateObsoleteFieldsToServices()
+        {
+            #pragma warning disable CS0618 // Type or member is obsolete
+            // Migrate camera settings to CameraPivotAdjuster
+            cameraPivotAdjuster.MigrateFrom(cameraDistance, pivotOffset, snapDownDistance, 
+                                           snapUpAllowance, groundSkin);
+            
+            // Migrate projection kinematics settings
+            projectionKinematics.MigrateFrom(rotatePlayerDuringSwitch, makePlayerKinematicDuringSwitch,
+                                            jumpOnlyDuringSwitch, fixYDuringRotation);
+            
+            // Migrate depenetration solver settings
+            depenetrationSolver.MigrateFrom(penetrationResolveIterations, penetrationSkin, overlapBoxInflation,
+                                           maxResolveStep, maxResolveTotal);
+            #pragma warning restore CS0618 // Type or member is obsolete
         }
     }
 }

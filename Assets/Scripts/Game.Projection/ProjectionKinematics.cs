@@ -125,5 +125,14 @@ namespace Game.Projection
             player.ActivePlane = (nextAxis == ProjectionAxis.FlattenZ) ? MovePlane.X : MovePlane.Z;
             player.SetPlaneLock(player.ActivePlane, planeConst);
         }
+        
+        public void MigrateFrom(bool rotatePlayerDuringSwitch, bool makePlayerKinematicDuringSwitch,
+                               bool jumpOnlyDuringSwitch, bool fixYDuringRotation)
+        {
+            this.rotatePlayerDuringSwitch = rotatePlayerDuringSwitch;
+            this.makePlayerKinematicDuringSwitch = makePlayerKinematicDuringSwitch;
+            this.jumpOnlyDuringSwitch = jumpOnlyDuringSwitch;
+            this.fixYDuringRotation = fixYDuringRotation;
+        }
     }
 }

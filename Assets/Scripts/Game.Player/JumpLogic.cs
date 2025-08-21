@@ -101,5 +101,20 @@ namespace Game.Player
         {
             jumpHeight = Mathf.Max(0.0001f, jumpHeight);
         }
+        
+        public void MigrateFrom(float jumpHeight, float jumpCutMultiplier, float coyoteTime, float jumpBufferTime,
+                               bool enableLandingSlide, float landingSlideDuration, float landingMinFallSpeed,
+                               float landingDecelMultiplier, float landingAccelMultiplier)
+        {
+            this.jumpHeight = jumpHeight;
+            this.jumpCutMultiplier = jumpCutMultiplier;
+            this.coyoteTime = coyoteTime;
+            this.jumpBufferTime = jumpBufferTime;
+            this.enableLandingSlide = enableLandingSlide;
+            this.landingSlideDuration = landingSlideDuration;
+            this.landingMinFallSpeed = landingMinFallSpeed;
+            this.landingDecelMultiplier = landingDecelMultiplier;
+            this.landingAccelMultiplier = landingAccelMultiplier;
+        }
     }
 }
