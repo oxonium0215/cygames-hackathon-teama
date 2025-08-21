@@ -49,13 +49,9 @@ namespace Game.Player
         private bool jumpQueued;
         private bool jumpHeld;
 
-        // Timers
-        private float lastGroundedTimer;
-        private float jumpBufferTimer;
-
-        // Landing slide
-        private float landingSlideTimer;
-        private float lastVelY;
+        // Services
+        private IGroundProbe groundProbe;
+        private IPlaneMotion planeMotion;
 
         // Lateral axis logic
         private MovePlane activePlane = MovePlane.X;
@@ -68,8 +64,11 @@ namespace Game.Player
 
         // Rotation freeze (no gravity/inertia/velocity changes while true)
         private bool rotationFrozen;
+        
+        // Cache for last velocity Y (for landing slide detection)
+        private float lastVelY;
 
-        public bool IsGrounded { get; private set; }
+        public bool IsGrounded => groundProbe?.IsGrounded ?? false;
         private float JumpVelocity => Mathf.Sqrt(2f * Mathf.Abs(gravity) * Mathf.Max(0.0001f, jumpHeight));
 
         public MovePlane ActivePlane
@@ -120,6 +119,11 @@ namespace Game.Player
             EnsureGroundCheckExists();
             UpdateGroundCheckPoseAndSize();
             ApplyAxisConstraints();
+            
+            // Initialize services
+            groundProbe = new GroundProbe(coyoteTime);
+            planeMotion = new PlaneMotion(enableLandingSlide, landingSlideDuration, 
+                landingAccelMultiplier, landingDecelMultiplier);
         }
 
         private void OnValidate()
@@ -142,7 +146,7 @@ namespace Game.Player
             if (rotationFrozen) return;
             jumpQueued = true;
             jumpHeld = true;
-            jumpBufferTimer = jumpBufferTime;
+            groundProbe?.SetJumpBuffer(jumpBufferTime);
         }
 
         public void JumpCanceled()
@@ -165,10 +169,8 @@ namespace Game.Player
                 return;
             }
 
-            if (IsGrounded) lastGroundedTimer = coyoteTime;
-            else lastGroundedTimer -= Time.deltaTime;
-
-            if (!jumpQueued) jumpBufferTimer -= Time.deltaTime;
+            // Update ground probe (handles coyote time and jump buffer timing)
+            groundProbe?.UpdateGroundCheck(groundCheck.position, groundCheckRadius, groundMask, Time.deltaTime);
         }
 
         private void FixedUpdate()
@@ -195,47 +197,27 @@ namespace Game.Player
                 }
             }
 
-            // Ground check each step
-            IsGrounded = Physics.CheckSphere(groundCheck.position, groundCheckRadius, groundMask, QueryTriggerInteraction.Ignore);
-
             var v = rb.linearVelocity;
 
-            // Landing slide trigger
-            if (enableLandingSlide && IsGrounded && lastVelY < 0f && Mathf.Abs(lastVelY) >= landingMinFallSpeed)
-                landingSlideTimer = landingSlideDuration;
+            // Update landing slide logic
+            planeMotion?.UpdateLandingSlide(IsGrounded, lastVelY, landingMinFallSpeed, Time.fixedDeltaTime);
 
-            // Lateral control
-            float input = lateralEnabled ? Mathf.Clamp(moveInput.x, -1f, 1f) : 0f;
-            float desired = input * maxRunSpeed;
-
-            bool hasInput = Mathf.Abs(input) > 0.01f;
-            float response = hasInput
-                ? (IsGrounded ? groundAcceleration : airAcceleration)
-                : (IsGrounded ? groundDeceleration : airDeceleration);
-
-            if (enableLandingSlide && IsGrounded && landingSlideTimer > 0f)
-            {
-                response *= hasInput ? landingAccelMultiplier : landingDecelMultiplier;
-                landingSlideTimer -= Time.fixedDeltaTime;
-            }
-
-            if (activePlane == MovePlane.X)
-                v.x = Mathf.MoveTowards(v.x, desired, response * Time.fixedDeltaTime);
-            else
-                v.z = Mathf.MoveTowards(v.z, desired, response * Time.fixedDeltaTime);
+            // Apply lateral movement through PlaneMotion service
+            v = planeMotion?.ApplyLateralMovement(moveInput, activePlane, maxRunSpeed, v, IsGrounded,
+                groundAcceleration, airAcceleration, groundDeceleration, airDeceleration, 
+                Time.fixedDeltaTime, lateralEnabled) ?? v;
 
             // Gravity + stick
             v.y += gravity * Time.fixedDeltaTime;
             if (IsGrounded && v.y < 0f)
                 v.y -= groundStickForce * Time.fixedDeltaTime;
 
-            // Buffered jump + coyote
-            if (jumpBufferTimer > 0f && lastGroundedTimer > 0f)
+            // Buffered jump + coyote (using GroundProbe service)
+            if (groundProbe != null && groundProbe.CanJump())
             {
                 v.y = JumpVelocity;
-                jumpBufferTimer = 0f;
-                lastGroundedTimer = 0f;
-                landingSlideTimer = 0f;
+                groundProbe.ConsumeJump();
+                planeMotion?.ResetLandingSlide();
             }
             jumpQueued = false;
 
