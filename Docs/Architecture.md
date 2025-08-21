@@ -20,12 +20,12 @@ This document describes the modernized codebase organization implemented in Phas
 
 **PlayerMotor** now acts as a façade that constructs and delegates to:
 
-- **IGroundProbe / GroundProbe**: Handles ground detection, coyote time, and jump buffer logic
+- **GroundProbe**: Handles ground detection, coyote time, and jump buffer logic
   - `UpdateGroundCheck()`: Performs Physics.CheckSphere and updates timing
   - `CanJump()`: Validates jump timing based on coyote time and buffer
   - `ConsumeJump()`: Resets timers when jump is executed
   
-- **IPlaneMotion / PlaneMotion**: Handles lateral input projection and landing slide effects  
+- **PlaneMotion**: Handles lateral input projection and landing slide effects  
   - `ApplyLateralMovement()`: Projects 2D input to 3D movement on active plane
   - `UpdateLandingSlide()`: Manages landing slide state and timing
   - `GetLandingSlideMultipliers()`: Returns acceleration/deceleration modifiers
@@ -34,34 +34,35 @@ This document describes the modernized codebase organization implemented in Phas
 
 **PerspectiveProjectionManager** now acts as a façade that constructs and delegates to:
 
-- **IProjectionController / ProjectionController**: State and timing for perspective switches
+- **ProjectionController**: State and timing for perspective switches
   - `BeginSwitch()`: Initiates rotation with duration and easing
   - `UpdateRotation()`: Returns interpolated progress (0-1) 
   - `CompleteSwitch()`: Finalizes rotation state
 
-- **IPlayerProjectionAdapter / PlayerProjectionAdapter**: Player state during projection switching
+- **PlayerProjectionAdapter**: Player state during projection switching
   - `PrepareForRotation()`: Freezes motor, sets kinematic state  
   - `RestoreAfterRotation()`: Restores player state post-rotation
   - `MapVelocityBetweenAxes()`: Preserves lateral velocity direction between projections
   - `SetPlayerPlane()`: Updates active plane and plane lock
 
-- **ICameraProjectionAdapter / CameraProjectionAdapter**: Camera pivot adjustments
+- **CameraProjectionAdapter**: Camera pivot adjustments
   - `RepositionPivotToCenter()`: Handles pivot positioning with upward-only rule
   - `UpdateRotation()`: Interpolates camera yaw during switches
   - `SetCameraDistance()`: Positions child camera at specified distance
 
-- **IDepenetrationSolver / DepenetrationSolver**: Vertical-only depenetration
+- **DepenetrationSolver**: Vertical-only depenetration
   - `ResolveVerticalOverlapUpwards()`: Uses OverlapBox + ComputePenetration  
   - Iteration caps and total displacement limits
   - Conservative fallback using bounds positioning
 
-### Interface Design
+### Service Design
 
-All services use interfaces for clean boundaries and testability:
-- Placed in appropriate Game.* assemblies (Player interfaces in Game.Player, etc.)
+All services use concrete types for simplicity and clarity:
 - Pure C# implementations (no MonoBehaviour inheritance)  
 - Manual composition in MonoBehaviour façades
 - Stateless where possible, or explicit state management
+- Classes remain small, focused, and test-friendly
+- Direct instantiation eliminates ceremony and improves readability
 
 ### Testing
 
@@ -157,11 +158,11 @@ This phase introduced a façade pattern to extract pure utilities from MonoBehav
 
 **VerticalCameraFollow** now acts as a façade delegating to pure utilities:
 
-- **IDeadZone** interface with **TopDeadZonePolicy** implementation
+- **TopDeadZonePolicy** concrete class
   - Computes threshold Y (pivotY + topDeadZone) and desired Y (playerY - topDeadZone)
   - Encapsulates dead-zone logic without external dependencies
 
-- **ISmoothing** interface with **ConstantSpeedSmoothing** implementation
+- **ConstantSpeedSmoothing** concrete class
   - Pure speed-based movement using Mathf.MoveTowards
   - SmoothDamp remains directly in the façade to preserve exact _velY state behavior
 
