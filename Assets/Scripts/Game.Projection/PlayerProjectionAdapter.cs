@@ -7,7 +7,7 @@ namespace Game.Projection
     /// <summary>
     /// Handles player state management during projection switches.
     /// </summary>
-    public class PlayerProjectionAdapter : IPlayerProjectionAdapter
+    public class PlayerProjectionAdapter
     {
         private readonly PlayerMotor player;
         private readonly Rigidbody playerRb;

@@ -3,28 +3,27 @@ using UnityEngine;
 namespace Game.Projection
 {
     /// <summary>
-    /// Handles vertical-only depenetration with iteration caps and conservative fallback.
+    /// Static utility for vertical-only depenetration using OverlapBox and ComputePenetration with iteration caps.
     /// </summary>
-    public class DepenetrationSolver
+    internal static class DepenetrationUtility
     {
-        private readonly float penetrationSkin;
-        private readonly float overlapBoxInflation;
-        private readonly float maxResolveStep;
-        private readonly float maxResolveTotal;
-        private readonly float groundSkin;
-        
-        public DepenetrationSolver(float penetrationSkin, float overlapBoxInflation, 
+        /// <summary>
+        /// Resolves overlaps by moving upward only, with iteration and displacement limits.
+        /// </summary>
+        /// <param name="collider">Player collider to resolve</param>
+        /// <param name="transform">Player transform</param>
+        /// <param name="groundMask">Ground layer mask</param>
+        /// <param name="iterations">Maximum iterations</param>
+        /// <param name="conservativeFallback">Whether to use conservative fallback method</param>
+        /// <param name="penetrationSkin">Skin distance for penetration</param>
+        /// <param name="overlapBoxInflation">Inflation factor for overlap box</param>
+        /// <param name="maxResolveStep">Maximum resolve step distance</param>
+        /// <param name="maxResolveTotal">Maximum total resolve distance</param>
+        /// <param name="groundSkin">Ground skin distance</param>
+        /// <returns>True if any movement occurred</returns>
+        public static bool ResolveVerticalOverlapUpwards(Collider collider, Transform transform, LayerMask groundMask, 
+            int iterations, bool conservativeFallback, float penetrationSkin, float overlapBoxInflation, 
             float maxResolveStep, float maxResolveTotal, float groundSkin)
-        {
-            this.penetrationSkin = penetrationSkin;
-            this.overlapBoxInflation = overlapBoxInflation;
-            this.maxResolveStep = maxResolveStep;
-            this.maxResolveTotal = maxResolveTotal;
-            this.groundSkin = groundSkin;
-        }
-        
-        public bool ResolveVerticalOverlapUpwards(Collider collider, Transform transform, LayerMask groundMask, 
-            int iterations, bool conservativeFallback)
         {
             if (!collider || !transform) return false;
             
@@ -33,7 +32,7 @@ namespace Game.Projection
             
             for (int iter = 0; iter < iterations; iter++)
             {
-                var overlaps = OverlapGroundAtPlayer(collider, transform, groundMask);
+                var overlaps = OverlapGroundAtPlayer(collider, transform, groundMask, overlapBoxInflation);
                 if (overlaps == null || overlaps.Length == 0) break;
                 
                 float requiredUp = 0f;
@@ -79,7 +78,7 @@ namespace Game.Projection
             
             if (conservativeFallback)
             {
-                var overlaps = OverlapGroundAtPlayer(collider, transform, groundMask);
+                var overlaps = OverlapGroundAtPlayer(collider, transform, groundMask, overlapBoxInflation);
                 if (overlaps != null && overlaps.Length > 0)
                 {
                     float highestTop = float.NegativeInfinity;
@@ -113,7 +112,7 @@ namespace Game.Projection
             return movedAny;
         }
         
-        private Collider[] OverlapGroundAtPlayer(Collider collider, Transform transform, LayerMask groundMask)
+        private static Collider[] OverlapGroundAtPlayer(Collider collider, Transform transform, LayerMask groundMask, float overlapBoxInflation)
         {
             Bounds b = collider.bounds;
             Vector3 center = b.center;
