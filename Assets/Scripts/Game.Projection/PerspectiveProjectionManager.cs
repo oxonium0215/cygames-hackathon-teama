@@ -6,9 +6,6 @@ using Game.Core;
 
 namespace Game.Projection
 {
-    /// <summary>
-    /// Handles player state management during projection switches.
-    /// </summary>
     public class PlayerProjectionAdapter
     {
         private readonly PlayerMotor player;
@@ -82,9 +79,6 @@ namespace Game.Projection
         }
     }
 
-    /// <summary>
-    /// Handles camera pivot adjustments during projection switches.
-    /// </summary>
     public class CameraProjectionAdapter
     {
         private readonly Transform cameraPivot;
@@ -129,9 +123,6 @@ namespace Game.Projection
         }
     }
 
-    /// <summary>
-    /// Pure C# implementation of projection switching state and timing.
-    /// </summary>
     public class ProjectionController
     {
         private float rotationTimer;
@@ -413,7 +404,6 @@ namespace Game.Projection
             projectionController.CompleteSwitch();
         }
 
-        // Vertical-only overlap resolution (delegated to DepenetrationSolver service).
         private bool ResolveVerticalOverlapUpwards(int iterations, bool conservativeFallback)
         {
             return depenetrationSolver?.ResolveVerticalOverlapUpwards(playerCollider, playerTransform, 
