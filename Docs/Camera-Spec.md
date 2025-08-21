@@ -54,6 +54,36 @@ These settings control the vertical-only depenetration system:
 - **maxResolveStep**: `2.0f` - Maximum distance per resolution step
 - **maxResolveTotal**: `8.0f` - Maximum total resolution distance
 
+## Vertical Follow (Top Dead Zone)
+
+The `VerticalCameraFollow` component provides Y-axis camera following with configurable dead zone behavior:
+
+### Dead Zone Configuration
+- **topDeadZone**: `3.0f` - Distance above the camera pivot Y before following starts (world units)
+
+### Motion Settings
+- **upSpeed**: `10f` - Move speed upwards (units/second) when following with constant speed
+- **useSmoothDamp**: `true` - Use SmoothDamp instead of constant speed for smoother motion
+- **smoothTime**: `0.15f` - Smooth time for SmoothDamp (only when useSmoothDamp is enabled)
+- **smoothMaxSpeed**: `30f` - Hard cap on upward movement speed (SmoothDamp only)
+
+### Behavior
+- **neverScrollDown**: `true` - Prevents camera from moving down once it has moved up
+
+### How It Works
+```
+Player Y Position
+     ↑
+     |  [Following Active]
+     |
+─────┼───── Top Dead Zone Threshold (pivot Y + topDeadZone)
+     |  [Dead Zone - No Following]
+     |
+Camera Pivot Y
+```
+
+When the player moves above the top dead zone threshold, the camera follows to keep the player at the edge of the dead zone. The camera never moves down when `neverScrollDown` is enabled, creating a ratcheting upward movement that preserves the highest reached position.
+
 ## Camera Adapter System
 
 The camera uses a service-based architecture with `ICameraProjectionAdapter`:
