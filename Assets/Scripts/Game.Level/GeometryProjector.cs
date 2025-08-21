@@ -160,12 +160,24 @@ namespace Game.Level
                 // Colliders: copy common types
                 CloneSupportedColliders(srcGO, cloneGO);
 
-                // Layer
-                if (projectedLayer >= 0 && projectedLayer <= 31)
-                    SetLayerRecursively(cloneGO, projectedLayer);
-                else
-                    cloneGO.layer = srcGO.layer;
+                // Layer - default to "Ground" if projectedLayer is unset
+                int targetLayer = GetTargetLayer(srcGO.layer);
+                SetLayerRecursively(cloneGO, targetLayer);
             }
+        }
+
+        private int GetTargetLayer(int sourceLayer)
+        {
+            if (projectedLayer >= 0 && projectedLayer <= 31)
+                return projectedLayer;
+
+            // Try to fall back to "Ground" layer if projectedLayer is unset
+            int groundLayer = LayerMask.NameToLayer("Ground");
+            if (groundLayer != -1)
+                return groundLayer;
+
+            // If "Ground" layer doesn't exist, use source layer
+            return sourceLayer;
         }
 
         private void CloneSupportedColliders(GameObject src, GameObject dst)
@@ -175,28 +187,43 @@ namespace Game.Level
                 switch (c)
                 {
                     case BoxCollider b:
-                        var nb = dst.AddComponent<BoxCollider>();
-                        nb.center = b.center;
-                        nb.size = b.size;
-                        nb.isTrigger = b.isTrigger;
+                        CloneBoxCollider(dst, b);
                         break;
                     case CapsuleCollider cap:
-                        var ncap = dst.AddComponent<CapsuleCollider>();
-                        ncap.center = cap.center;
-                        ncap.radius = cap.radius;
-                        ncap.height = cap.height;
-                        ncap.direction = cap.direction;
-                        ncap.isTrigger = cap.isTrigger;
+                        CloneCapsuleCollider(dst, cap);
                         break;
                     case MeshCollider mc:
-                        var nmc = dst.AddComponent<MeshCollider>();
-                        nmc.sharedMesh = mc.sharedMesh;
-                        nmc.convex = mc.convex;
-                        nmc.cookingOptions = mc.cookingOptions;
-                        nmc.isTrigger = mc.isTrigger;
+                        CloneMeshCollider(dst, mc);
                         break;
                 }
             }
+        }
+
+        private void CloneBoxCollider(GameObject dst, BoxCollider src)
+        {
+            var nb = dst.AddComponent<BoxCollider>();
+            nb.center = src.center;
+            nb.size = src.size;
+            nb.isTrigger = src.isTrigger;
+        }
+
+        private void CloneCapsuleCollider(GameObject dst, CapsuleCollider src)
+        {
+            var ncap = dst.AddComponent<CapsuleCollider>();
+            ncap.center = src.center;
+            ncap.radius = src.radius;
+            ncap.height = src.height;
+            ncap.direction = src.direction;
+            ncap.isTrigger = src.isTrigger;
+        }
+
+        private void CloneMeshCollider(GameObject dst, MeshCollider src)
+        {
+            var nmc = dst.AddComponent<MeshCollider>();
+            nmc.sharedMesh = src.sharedMesh;
+            nmc.convex = src.convex;
+            nmc.cookingOptions = src.cookingOptions;
+            nmc.isTrigger = src.isTrigger;
         }
 
         private static void SetLayerRecursively(GameObject go, int layer)

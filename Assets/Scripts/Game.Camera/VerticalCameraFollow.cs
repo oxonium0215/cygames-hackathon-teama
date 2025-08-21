@@ -32,18 +32,24 @@ namespace Game.Camera
         [Tooltip("Prevents the camera from ever moving down once it has moved up.")]
         [SerializeField] private bool neverScrollDown = true;
 
-        float _maxPivotY;
-        float _velY; // for SmoothDamp
+        private float _maxPivotY;
+        private float _velY; // for SmoothDamp
 
-        void Awake()
+        private void Awake()
         {
             _maxPivotY = transform.position.y;
         }
 
-        void LateUpdate()
+        private void LateUpdate()
         {
             if (!followTarget) return;
 
+            EnforceNeverScrollDownRule();
+            UpdateCameraPosition();
+        }
+
+        private void EnforceNeverScrollDownRule()
+        {
             // Downward scrolling off
             var pos = transform.position;
             if (neverScrollDown && pos.y < _maxPivotY)
@@ -51,7 +57,10 @@ namespace Game.Camera
                 pos.y = _maxPivotY;
                 transform.position = pos;
             }
+        }
 
+        private void UpdateCameraPosition()
+        {
             // Check if player is above the top dead zone
             float pivotY = transform.position.y;
             float playerY = followTarget.position.y;
@@ -59,41 +68,59 @@ namespace Game.Camera
 
             if (playerY > thresholdY)
             {
-                // Desired Y keeps the player exactly at the top edge of the dead zone
-                float desiredY = playerY - topDeadZone;
-                float newY;
-
-                if (useSmoothDamp)
-                {
-                    newY = Mathf.SmoothDamp(pivotY, desiredY, ref _velY, smoothTime, smoothMaxSpeed, Time.deltaTime);
-                    // SmoothDamp may overshoot downwards if desired decreases
-                    if (neverScrollDown) newY = Mathf.Max(newY, pivotY);
-                } else
-                {
-                    float step = upSpeed * Time.deltaTime;
-                    newY = Mathf.MoveTowards(pivotY, desiredY, step);
-                }
-
-                // Enforce upward-only rule
-                if (neverScrollDown) newY = Mathf.Max(newY, pivotY);
-
-                pos.y = newY;
-                transform.position = pos;
-
-                // Update the max pivot Y reached
-                if (neverScrollDown && newY > _maxPivotY)
-                    _maxPivotY = newY;
-            } else
+                UpdateCameraPositionAboveThreshold(pivotY, playerY);
+            }
+            else
             {
-                // Player is inside or below the dead zone
-                if (neverScrollDown)
+                HandlePlayerInsideDeadZone();
+            }
+        }
+
+        private void UpdateCameraPositionAboveThreshold(float pivotY, float playerY)
+        {
+            // Desired Y keeps the player exactly at the top edge of the dead zone
+            float desiredY = playerY - topDeadZone;
+            float newY = CalculateNewCameraY(pivotY, desiredY);
+
+            // Enforce upward-only rule
+            if (neverScrollDown) newY = Mathf.Max(newY, pivotY);
+
+            var pos = transform.position;
+            pos.y = newY;
+            transform.position = pos;
+
+            // Update the max pivot Y reached
+            if (neverScrollDown && newY > _maxPivotY)
+                _maxPivotY = newY;
+        }
+
+        private float CalculateNewCameraY(float pivotY, float desiredY)
+        {
+            if (useSmoothDamp)
+            {
+                float newY = Mathf.SmoothDamp(pivotY, desiredY, ref _velY, smoothTime, smoothMaxSpeed, Time.deltaTime);
+                // SmoothDamp may overshoot downwards if desired decreases
+                if (neverScrollDown) newY = Mathf.Max(newY, pivotY);
+                return newY;
+            }
+            else
+            {
+                float step = upSpeed * Time.deltaTime;
+                return Mathf.MoveTowards(pivotY, desiredY, step);
+            }
+        }
+
+        private void HandlePlayerInsideDeadZone()
+        {
+            // Player is inside or below the dead zone
+            if (neverScrollDown)
+            {
+                // If something external lowered camera, bounce back up to max
+                if (transform.position.y < _maxPivotY)
                 {
-                    // If something external lowered player , bounce back up to max
-                    if (transform.position.y < _maxPivotY)
-                    {
-                        pos.y = _maxPivotY;
-                        transform.position = pos;
-                    }
+                    var pos = transform.position;
+                    pos.y = _maxPivotY;
+                    transform.position = pos;
                 }
             }
         }
