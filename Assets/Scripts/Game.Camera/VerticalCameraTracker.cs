@@ -38,6 +38,13 @@ namespace Game.Camera
         void Awake()
         {
             _maxPivotY = transform.position.y;
+            
+            // Auto-find player if not assigned
+            if (!followTarget)
+            {
+                var player = GameObject.FindGameObjectWithTag("Player");
+                if (player) followTarget = player.transform;
+            }
         }
 
         void LateUpdate()
