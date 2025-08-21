@@ -3,7 +3,9 @@
     "rootNamespace": "Game.Debugging",
     "references": [
         "Game.Core",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Game.Input",
+        "Game.Projection"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
