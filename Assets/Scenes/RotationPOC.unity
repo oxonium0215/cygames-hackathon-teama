@@ -1261,7 +1261,7 @@ MonoBehaviour:
   planeZ: 0
   planeX: 0
   planeZOffset: -8.5
-  planeXOffset: 8.5
+  planeXOffset: -8.5
   copyMaterials: 1
   projectedLayer: -1
   disableSourceColliders: 1
@@ -1317,7 +1317,7 @@ MonoBehaviour:
   playerTransform: {fileID: 0}
   playerCollider: {fileID: 0}
   cameraDistance: 15
-  pivotOffset: {x: 4.25, y: 0, z: -4.25}
+  pivotOffset: {x: 0, y: 0, z: 0}
   viewAYaw: 0
   viewBYaw: -90
   viewAProjection: 0
