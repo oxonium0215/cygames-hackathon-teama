@@ -59,10 +59,7 @@ namespace Game.Projection
         private Rigidbody playerRb;
         
         // Services
-        private IProjectionController projectionController;
-        private IPlayerProjectionAdapter playerAdapter;
-        private ICameraProjectionAdapter cameraAdapter;
-        private IDepenetrationSolver depenetrationSolver;
+        private ProjectionController projectionController;
 
         // Read-only accessors for external components (e.g., input suppression)
         /// <summary>Returns true if a perspective switch is currently in progress.</summary>
@@ -94,13 +91,9 @@ namespace Game.Projection
 
             // Initialize services
             projectionController = new ProjectionController();
-            playerAdapter = new PlayerProjectionAdapter(player, playerRb);
-            cameraAdapter = new CameraProjectionAdapter(cameraPivot);
-            depenetrationSolver = new DepenetrationSolver(penetrationSkin, overlapBoxInflation, 
-                maxResolveStep, maxResolveTotal, groundSkin);
 
-            cameraAdapter.RepositionPivotToCenter(rotationCenter, pivotOffset);
-            cameraAdapter.SetCameraDistance(cameraDistance);
+            RepositionCameraPivotToCenter(rotationCenter, pivotOffset);
+            SetCameraDistance(cameraDistance);
             ApplyViewImmediate(viewIndex);
         }
 
@@ -116,7 +109,7 @@ namespace Game.Projection
 
             projectionBuilder.SetSourcesVisible(true);
             projectionBuilder.ClearProjected();
-            cameraAdapter.RepositionPivotToCenter(rotationCenter, pivotOffset);
+            RepositionCameraPivotToCenter(rotationCenter, pivotOffset);
 
             // If no player, rotate camera only
             if (!playerTransform)
@@ -132,8 +125,8 @@ namespace Game.Projection
             // Capture pre-rotation velocity (read ok even if kinematic)
             Vector3 preVel = playerRb ? playerRb.linearVelocity : Vector3.zero;
 
-            // Use PlayerProjectionAdapter to prepare for rotation
-            bool originalKinematic = playerAdapter.PrepareForRotation(makePlayerKinematicDuringSwitch, jumpOnlyDuringSwitch);
+            // Prepare player for rotation
+            bool originalKinematic = PreparePlayerForRotation(makePlayerKinematicDuringSwitch, jumpOnlyDuringSwitch);
 
             // Rotation setup
             float startYaw = cameraPivot.eulerAngles.y;
@@ -170,8 +163,8 @@ namespace Game.Projection
                 progress = projectionController.UpdateRotation(Time.deltaTime);
                 if (progress < 0f) break; // Complete
                 
-                // Camera yaw using CameraProjectionAdapter
-                cameraAdapter.UpdateRotation(startYaw, targetYaw, progress);
+                // Camera yaw
+                UpdateCameraRotation(startYaw, targetYaw, progress);
 
                 if (rotatePlayerDuringSwitch)
                 {
@@ -181,11 +174,10 @@ namespace Game.Projection
                     if (fixYDuringRotation) p.y = fixedY;
                     playerTransform.position = p;
 
-                    // Resolve vertical overlaps while rotating using DepenetrationSolver
+                    // Resolve vertical overlaps while rotating
                     if (resolveVerticalOverlapDuringRotation && playerCollider)
                     {
-                        if (depenetrationSolver.ResolveVerticalOverlapUpwards(playerCollider, playerTransform, 
-                            groundMask, penetrationResolveIterations, false))
+                        if (ResolveVerticalOverlap(penetrationResolveIterations, false))
                         {
                             fixedY = Mathf.Max(fixedY, playerTransform.position.y);
                         }
@@ -220,21 +212,20 @@ namespace Game.Projection
                 playerTransform.position = p;
             }
 
-            // Lock to new plane using PlayerProjectionAdapter
+            // Lock to new plane
             var nextAxis = GetProjectionForCurrent();
             float planeConst = (nextAxis == Game.Level.ProjectionAxis.FlattenZ) ? seamZ : seamX;
             Game.Player.MovePlane newPlane = (nextAxis == Game.Level.ProjectionAxis.FlattenZ) ? Game.Player.MovePlane.X : Game.Player.MovePlane.Z;
-            playerAdapter.SetPlayerPlane(newPlane, planeConst);
+            SetPlayerPlane(newPlane, planeConst);
 
-            // Post-rotation handling using DepenetrationSolver
-            bool liftedPost = depenetrationSolver.ResolveVerticalOverlapUpwards(playerCollider, playerTransform, 
-                groundMask, penetrationResolveIterations, true);
+            // Post-rotation handling
+            bool liftedPost = ResolveVerticalOverlap(penetrationResolveIterations, true);
 
-            // Use PlayerProjectionAdapter to restore state
-            playerAdapter.RestoreAfterRotation(originalKinematic, jumpOnlyDuringSwitch);
+            // Restore player state
+            RestorePlayerAfterRotation(originalKinematic, jumpOnlyDuringSwitch);
 
-            // Map inertia using PlayerProjectionAdapter
-            Vector3 vFinal = playerAdapter.MapVelocityBetweenAxes(preVel, startAxis, nextAxis);
+            // Map inertia
+            Vector3 vFinal = MapVelocityBetweenAxes(preVel, startAxis, nextAxis);
 
             if (playerRb && !playerRb.isKinematic)
             {
@@ -243,14 +234,6 @@ namespace Game.Projection
 
             projectionController.CompleteSwitch();
         }
-
-        // Vertical-only overlap resolution (delegated to DepenetrationSolver service).
-        private bool ResolveVerticalOverlapUpwards(int iterations, bool conservativeFallback)
-        {
-            return depenetrationSolver?.ResolveVerticalOverlapUpwards(playerCollider, playerTransform, 
-                groundMask, iterations, conservativeFallback) ?? false;
-        }
-
 
         private IEnumerator RotateCameraOnly(int nextIndex)
         {
@@ -271,7 +254,7 @@ namespace Game.Projection
 
         private void ApplyViewImmediate(int idx)
         {
-            cameraAdapter?.RepositionPivotToCenter(rotationCenter, pivotOffset);
+            RepositionCameraPivotToCenter(rotationCenter, pivotOffset);
 
             var eul = cameraPivot.eulerAngles;
             eul.y = (idx == 0) ? viewAYaw : viewBYaw;
@@ -287,7 +270,7 @@ namespace Game.Projection
             var axis = GetProjectionForCurrent();
             float planeConst = (axis == Game.Level.ProjectionAxis.FlattenZ) ? projectionBuilder.GetPlaneZ() : projectionBuilder.GetPlaneX();
             Game.Player.MovePlane newPlane = (axis == Game.Level.ProjectionAxis.FlattenZ) ? Game.Player.MovePlane.X : Game.Player.MovePlane.Z;
-            playerAdapter?.SetPlayerPlane(newPlane, planeConst);
+            SetPlayerPlane(newPlane, planeConst);
 
             var p = playerTransform.position;
             if (axis == Game.Level.ProjectionAxis.FlattenZ) p.z = planeConst; else p.x = planeConst;
@@ -295,8 +278,7 @@ namespace Game.Projection
 
             // For initial placement it's okay to snap to ground to avoid starting inside geometry.
             SnapPlayerToGround();
-            depenetrationSolver?.ResolveVerticalOverlapUpwards(playerCollider, playerTransform, 
-                groundMask, penetrationResolveIterations, true);
+            ResolveVerticalOverlap(penetrationResolveIterations, true);
         }
 
         private Game.Level.ProjectionAxis GetProjectionForCurrent() => (viewIndex == 0) ? viewAProjection : viewBProjection;
@@ -308,8 +290,8 @@ namespace Game.Projection
 
         private void RepositionPivotToCenter()
         {
-            cameraAdapter?.RepositionPivotToCenter(rotationCenter, pivotOffset);
-            cameraAdapter?.SetCameraDistance(cameraDistance);
+            RepositionCameraPivotToCenter(rotationCenter, pivotOffset);
+            SetCameraDistance(cameraDistance);
         }
 
         private bool SnapPlayerToGround()
@@ -330,6 +312,116 @@ namespace Game.Projection
                 return true;
             }
             return false;
+        }
+
+        #region Private Methods (replacing adapters)
+        
+        // Camera operations (replacing CameraProjectionAdapter)
+        private void RepositionCameraPivotToCenter(Transform rotationCenter, Vector3 pivotOffset)
+        {
+            if (!cameraPivot) return;
+            
+            Vector3 center = rotationCenter ? rotationCenter.position : cameraPivot.position - pivotOffset;
+            Vector3 target = center + pivotOffset;
+            
+            // Do not scroll down: preserve current (higher) Y if applicable (compatible with VerticalCameraFollow).
+            target.y = Mathf.Max(target.y, cameraPivot.position.y);
+            
+            cameraPivot.position = target;
+        }
+        
+        private void UpdateCameraRotation(float startYaw, float targetYaw, float progress)
+        {
+            if (!cameraPivot) return;
+            
+            float deltaYaw = Mathf.DeltaAngle(startYaw, targetYaw);
+            float currentYaw = Mathf.LerpAngle(startYaw, startYaw + deltaYaw, progress);
+            
+            var eul = cameraPivot.eulerAngles;
+            eul.y = currentYaw;
+            cameraPivot.eulerAngles = eul;
+        }
+        
+        private void SetCameraDistance(float distance)
+        {
+            if (!cameraPivot || cameraPivot.childCount == 0) return;
+            
+            var cam = cameraPivot.GetChild(0);
+            cam.localPosition = new Vector3(0f, 0f, -Mathf.Abs(distance));
+            cam.localRotation = Quaternion.identity;
+        }
+
+        // Player operations (replacing PlayerProjectionAdapter)
+        private bool PreparePlayerForRotation(bool makeKinematic, bool jumpOnlyMode)
+        {
+            // Freeze motor and input
+            player.BeginRotationFreeze();
+            if (jumpOnlyMode) player.SetLateralEnabled(false);
+            
+            // Make kinematic during rotation
+            bool originalKinematic = false;
+            if (playerRb && makeKinematic)
+            {
+                originalKinematic = playerRb.isKinematic;
+                if (!originalKinematic)
+                {
+                    playerRb.linearVelocity = Vector3.zero;
+                    playerRb.angularVelocity = Vector3.zero;
+                    playerRb.isKinematic = true;
+                }
+            }
+            
+            return originalKinematic;
+        }
+        
+        private void RestorePlayerAfterRotation(bool originalKinematic, bool jumpOnlyMode)
+        {
+            // Restore kinematic state
+            if (playerRb)
+            {
+                playerRb.isKinematic = originalKinematic;
+            }
+            
+            // Re-enable input
+            if (jumpOnlyMode) player.SetLateralEnabled(true);
+            
+            // Unfreeze motor
+            player.EndRotationFreeze();
+        }
+        
+        private Vector3 MapVelocityBetweenAxes(Vector3 preRotationVelocity, Game.Level.ProjectionAxis sourceAxis, Game.Level.ProjectionAxis targetAxis)
+        {
+            // Map inertia: preserve lateral direction (no sign flip), preserve vertical velocity
+            float preLateral = (sourceAxis == Game.Level.ProjectionAxis.FlattenZ) ? preRotationVelocity.x : preRotationVelocity.z;
+            float newLateral = preLateral; // Keep direction as specified in original code
+            
+            Vector3 vFinal = Vector3.zero;
+            if (targetAxis == Game.Level.ProjectionAxis.FlattenZ) 
+                vFinal.x = newLateral; 
+            else 
+                vFinal.z = newLateral;
+                
+            // Preserve vertical velocity for natural fall
+            vFinal.y = preRotationVelocity.y;
+            
+            return vFinal;
+        }
+        
+        private void SetPlayerPlane(Game.Player.MovePlane newPlane, float planeConstant)
+        {
+            player.ActivePlane = newPlane;
+            player.SetPlaneLock(newPlane, planeConstant);
+        }
+
+        // Depenetration operations (replacing DepenetrationSolver)
+        private bool ResolveVerticalOverlap(int iterations, bool conservativeFallback)
+        {
+            return DepenetrationUtility.ResolveVerticalOverlapUpwards(playerCollider, playerTransform, 
+                groundMask, iterations, conservativeFallback, penetrationSkin, overlapBoxInflation, 
+                maxResolveStep, maxResolveTotal, groundSkin);
+        }
+        
+        #endregion
         }
     }
 }
