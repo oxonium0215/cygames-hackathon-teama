@@ -60,8 +60,8 @@ namespace Game.Projection
         
         // Services
         private ProjectionController projectionController;
-        private IPlayerProjectionAdapter playerAdapter;
-        private ICameraProjectionAdapter cameraAdapter;
+        private PlayerProjectionAdapter playerAdapter;
+        private CameraProjectionAdapter cameraAdapter;
         private IDepenetrationSolver depenetrationSolver;
 
         // Read-only accessors for external components (e.g., input suppression)
