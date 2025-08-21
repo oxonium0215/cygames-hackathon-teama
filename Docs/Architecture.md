@@ -199,7 +199,41 @@ Script field initializers updated to match scene-tuned values:
 - **VerticalCameraFollow**: All defaults already matched RotationPOC scene
 - **GeometryProjector**: Updated planeZOffset (-8.5f) and planeXOffset (8.5f) to match scene values
 
-## Phase 2B+ Planning
+## Phase 2C: Simplified Input Path with Minimal Adapter
+
+**Completed in Phase 2C:**
+- Removed all test scaffolding (Assets/Tests/**) for project simplicity
+- Introduced minimal input adapter pattern with clean interfaces
+- No behavior changes, no scene/prefab changes, no public API changes
+
+### Simplified Input Architecture
+
+**PlayerInputRelay (MonoBehaviour façade) → UnityPlayerInput (IPlayerInput) → PlayerMotor (unchanged public API)**
+
+The input path now uses a minimal adapter pattern:
+
+- **IPlayerInput** interface provides minimal inputs PlayerMotor needs:
+  - `Vector2 Move { get; }`
+  - `bool JumpHeld { get; }`  
+  - `bool JumpPressedThisFrame { get; }`
+  - `void ClearTransient()` // resets edge flags once per frame
+
+- **UnityPlayerInput** class implements IPlayerInput with event-driven updates:
+  - `SetMove(Vector2)` - updates move vector
+  - `OnJumpPerformed()` - sets held and pressed flags
+  - `OnJumpCanceled()` - clears held flag
+  - Pure C# class (no MonoBehaviour)
+
+- **PlayerInputRelay** maintains identical public API but internally:
+  - Creates and owns a UnityPlayerInput instance
+  - Forwards input events to both UnityPlayerInput and PlayerMotor (preserving existing behavior)
+  - Calls `playerInput.ClearTransient()` once per frame to reset edge flags
+
+### Test Removal
+
+Phase 2C intentionally removed all test files and assemblies to keep the project simple at this time. The extracted services from Phase 2A/2B remain fully functional but are no longer covered by automated tests.
+
+## Phase 2C+ Planning
 
 Future improvements will include:
 - Scene splitting and reorganization for better loading performance  
@@ -209,13 +243,14 @@ Future improvements will include:
 
 ## Verification
 
-To verify Phase 1 + 2B:
+To verify Phase 1 + 2B + 2C:
 1. Open `Scenes/RotationPOC.unity`
 2. Confirm console is clean (no missing scripts)
 3. Test player movement, jumping, and perspective switching
 4. **Verify camera behavior identical**: dead-zone, upward-only scrolling, smooth/constant speed options
 5. **Verify projection behavior identical**: geometry cloning, layer assignment, material copying
-6. Verify URP pipeline and input systems still work correctly
-7. Check Project Settings show "CygamesHackathon" for both Product Name and UWP Package Name
-8. **Test defaults**: Create new scene, add VerticalCameraFollow + GeometryProjector, verify inspector values match RotationPOC
-9. **Run EditMode tests**: Verify SmoothingTests, DeadZoneTests, ProjectorPassTests all pass
+6. **Verify input behavior identical**: move, jump, jump-cut, and view switching work exactly as before
+7. Verify URP pipeline and input systems still work correctly
+8. Check Project Settings show "CygamesHackathon" for both Product Name and UWP Package Name
+9. **Test defaults**: Create new scene, add VerticalCameraFollow + GeometryProjector, verify inspector values match RotationPOC
+10. **Note**: EditMode tests were removed in Phase 2C for project simplicity
