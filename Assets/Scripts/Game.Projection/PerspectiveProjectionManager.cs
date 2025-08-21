@@ -71,6 +71,74 @@ namespace Game.Projection
         /// <summary>Returns the configured jump-only-during-switch setting.</summary>
         public bool JumpOnlyDuringSwitch => jumpOnlyDuringSwitch;
 
+#if UNITY_EDITOR
+        /// <summary>
+        /// Editor-only validation to ensure parameter relationships are consistent.
+        /// Enforces constraints between related parameters to prevent configuration drift.
+        /// </summary>
+        private void OnValidate()
+        {
+            // Ensure maxResolveStep doesn't exceed maxResolveTotal
+            if (maxResolveStep > maxResolveTotal)
+            {
+                maxResolveStep = Mathf.Min(maxResolveStep, maxResolveTotal);
+                Debug.LogWarning($"[PerspectiveProjectionManager] maxResolveStep clamped to maxResolveTotal ({maxResolveTotal:F2})", this);
+            }
+
+            // Ensure penetration skin is reasonable relative to resolve step
+            if (penetrationSkin > maxResolveStep * 0.5f)
+            {
+                penetrationSkin = maxResolveStep * 0.1f;
+                Debug.LogWarning($"[PerspectiveProjectionManager] penetrationSkin adjusted to {penetrationSkin:F4} (10% of maxResolveStep)", this);
+            }
+
+            // Ensure ground skin doesn't exceed snap up allowance
+            if (groundSkin > snapUpAllowance)
+            {
+                groundSkin = snapUpAllowance * 0.5f;
+                Debug.LogWarning($"[PerspectiveProjectionManager] groundSkin adjusted to {groundSkin:F3} (50% of snapUpAllowance)", this);
+            }
+
+            // Ensure overlap box inflation is within reasonable bounds
+            if (overlapBoxInflation < 0.5f || overlapBoxInflation > 1.5f)
+            {
+                overlapBoxInflation = Mathf.Clamp(overlapBoxInflation, 0.5f, 1.5f);
+                Debug.LogWarning($"[PerspectiveProjectionManager] overlapBoxInflation clamped to reasonable range ({overlapBoxInflation:F2})", this);
+            }
+
+            // Ensure rotation duration is positive
+            if (rotateDuration <= 0f)
+            {
+                rotateDuration = 0.5f;
+                Debug.LogWarning("[PerspectiveProjectionManager] rotateDuration must be positive, reset to 0.5", this);
+            }
+
+            // Validate view angles are different enough to be meaningful
+            float angleDiff = Mathf.Abs(Mathf.DeltaAngle(viewAYaw, viewBYaw));
+            if (angleDiff < 30f)
+            {
+                Debug.LogWarning($"[PerspectiveProjectionManager] View angle difference is small ({angleDiff:F1}°). Consider larger separation for clearer projection switching.", this);
+            }
+
+            // Ensure projection axes are different between views
+            if (viewAProjection == viewBProjection)
+            {
+                Debug.LogWarning("[PerspectiveProjectionManager] Both views use the same projection axis. This may not provide meaningful perspective switching.", this);
+            }
+
+            // Validate iteration count is reasonable
+            if (penetrationResolveIterations < 1)
+            {
+                penetrationResolveIterations = 1;
+                Debug.LogWarning("[PerspectiveProjectionManager] penetrationResolveIterations must be at least 1", this);
+            }
+            else if (penetrationResolveIterations > 10)
+            {
+                Debug.LogWarning("[PerspectiveProjectionManager] High penetrationResolveIterations may impact performance", this);
+            }
+        }
+#endif
+
         private void Start()
         {
             if (!projectionBuilder || !cameraPivot)
