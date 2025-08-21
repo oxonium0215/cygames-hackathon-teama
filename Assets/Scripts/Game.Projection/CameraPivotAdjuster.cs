@@ -6,7 +6,7 @@ namespace Game.Projection
     public class CameraPivotAdjuster
     {
         [Header("Camera")]
-        [SerializeField] private float cameraDistance = 10f;
+        [SerializeField] private float cameraDistance = 15f;  // Scene has 15, not 10
         [SerializeField] private Vector3 pivotOffset = Vector3.zero;
 
         [Header("Ground / Projection")]
@@ -15,6 +15,7 @@ namespace Game.Projection
         [SerializeField] private float groundSkin = 0.05f;
 
         public float GroundSkin => groundSkin;
+        public float GetCameraDistance() => cameraDistance;
 
         public void RepositionPivotToCenter(Transform cameraPivot, Transform rotationCenter)
         {

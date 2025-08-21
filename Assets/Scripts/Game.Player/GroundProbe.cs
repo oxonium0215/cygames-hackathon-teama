@@ -7,7 +7,7 @@ namespace Game.Player
     {
         [Header("Ground Check")]
         [SerializeField] private Transform groundCheck;
-        [SerializeField] private float groundCheckRadius = 0.15f;
+        [SerializeField] private float groundCheckRadius = 0.2f;  // Scene has 0.2, not 0.15
         [SerializeField] private LayerMask groundMask;
         [SerializeField] private float groundCheckSkin = 0.02f;
         [SerializeField] private bool autoSizeGroundCheck = true;

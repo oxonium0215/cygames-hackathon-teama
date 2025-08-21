@@ -19,12 +19,12 @@ namespace Game.Projection
 
         [Header("Views")]
         [SerializeField] private float viewAYaw = 0f;
-        [SerializeField] private float viewBYaw = 90f;
+        [SerializeField] private float viewBYaw = -90f;  // Scene has -90, not 90
         [SerializeField] private ProjectionAxis viewAProjection = ProjectionAxis.FlattenZ; // XY
         [SerializeField] private ProjectionAxis viewBProjection = ProjectionAxis.FlattenX; // ZY
 
         [Header("Rotation")]
-        [SerializeField] private float rotateDuration = 0.3f;
+        [SerializeField] private float rotateDuration = 0.5f;  // Scene has 0.5, not 0.3
         [SerializeField] private AnimationCurve rotateEase = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
         [Header("Ground / Projection")]

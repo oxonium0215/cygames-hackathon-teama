@@ -6,14 +6,14 @@ namespace Game.Player
     public class PlaneMotion
     {
         [Header("Movement (Inertia)")]
-        [SerializeField] private float maxRunSpeed = 7f;
+        [SerializeField] private float maxRunSpeed = 9f;  // Scene has 9, not 7
         [SerializeField] private float groundAcceleration = 80f;
         [SerializeField] private float airAcceleration = 40f;
         [SerializeField] private float groundDeceleration = 60f;
         [SerializeField] private float airDeceleration = 20f;
 
         [Header("Gravity")]
-        [SerializeField] private float gravity = -30f;
+        [SerializeField] private float gravity = -40f;  // Scene has -40, not -30
         [SerializeField] private float groundStickForce = 5f;
 
         // Internal state
