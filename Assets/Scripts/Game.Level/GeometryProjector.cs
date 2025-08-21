@@ -29,9 +29,9 @@ namespace Game.Level
 
         [Header("Offsets (relative to RotationCenter)")]
         [Tooltip("Additive offset to center.z used when axis = FlattenZ.")]
-        [SerializeField] private float planeZOffset = 0f;
+        [SerializeField] private float planeZOffset = -8.5f;
         [Tooltip("Additive offset to center.x used when axis = FlattenX.")]
-        [SerializeField] private float planeXOffset = 0f;
+        [SerializeField] private float planeXOffset = 8.5f;
 
         [Header("Rendering/Physics")]
         [Tooltip("Clone materials from sources if a MeshRenderer exists (even if disabled).")]
