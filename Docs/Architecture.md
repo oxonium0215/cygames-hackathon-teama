@@ -149,6 +149,56 @@ Assets/Scripts/
 - No functional logic changes
 - Script meta GUIDs preserved where possible
 
+## Phase 2B: Camera + Level Refactor with Behavior Preservation
+
+This phase introduced a façade pattern to extract pure utilities from MonoBehaviours while maintaining identical runtime behavior and serialized field compatibility.
+
+### Camera Module Internal Refactor
+
+**VerticalCameraFollow** now acts as a façade delegating to pure utilities:
+
+- **IDeadZone** interface with **TopDeadZonePolicy** implementation
+  - Computes threshold Y (pivotY + topDeadZone) and desired Y (playerY - topDeadZone)
+  - Encapsulates dead-zone logic without external dependencies
+
+- **ISmoothing** interface with **ConstantSpeedSmoothing** implementation
+  - Pure speed-based movement using Mathf.MoveTowards
+  - SmoothDamp remains directly in the façade to preserve exact _velY state behavior
+
+- **Behavior preservation**: neverScrollDown semantics, serialized field names, default values, and update order remain identical
+
+### Level Module Internal Refactor
+
+**GeometryProjector** now acts as a façade delegating to:
+
+- **ProjectorPass** class handling idempotent cloning process
+  - Mesh/MeshRenderer cloning with material assignment (copyMaterials flag)
+  - Collider cloning (BoxCollider, CapsuleCollider, MeshCollider)
+  - Layer assignment (projectedLayer, -1 keeps source layer)
+  - Plane flattening per axis (FlattenZ/FlattenX) with rotationCenter + offsets
+  - Provides Run(axis, context) and Clear(parentTransform) methods
+
+- **Behavior preservation**: All serialized fields, hideSourcesWhenIdle and disableSourceColliders handling, idempotency maintained exactly
+
+### Test Coverage
+
+**EditMode tests** validate the extracted utilities:
+
+- **SmoothingTests**: ConstantSpeedSmoothing behavior, speed limits, target reaching
+- **DeadZoneTests**: TopDeadZonePolicy threshold and desired Y computations  
+- **ProjectorPassTests**: 
+  - Idempotent rebuilds (no duplicate children after repeated runs)
+  - Material copying on/off behavior
+  - Layer assignment including -1 source layer preservation
+  - Plane flattening on X vs Z axes with correct coordinate preservation
+  - Collider cloning with property preservation
+
+### Defaults Normalization
+
+Script field initializers updated to match scene-tuned values:
+- **VerticalCameraFollow**: All defaults already matched RotationPOC scene
+- **GeometryProjector**: Updated planeZOffset (-8.5f) and planeXOffset (8.5f) to match scene values
+
 ## Phase 2B+ Planning
 
 Future improvements will include:
@@ -159,9 +209,13 @@ Future improvements will include:
 
 ## Verification
 
-To verify the migration:
+To verify Phase 1 + 2B:
 1. Open `Scenes/RotationPOC.unity`
 2. Confirm console is clean (no missing scripts)
 3. Test player movement, jumping, and perspective switching
-4. Verify URP pipeline and input systems still work correctly
-5. Check Project Settings show "CygamesHackathon" for both Product Name and UWP Package Name
+4. **Verify camera behavior identical**: dead-zone, upward-only scrolling, smooth/constant speed options
+5. **Verify projection behavior identical**: geometry cloning, layer assignment, material copying
+6. Verify URP pipeline and input systems still work correctly
+7. Check Project Settings show "CygamesHackathon" for both Product Name and UWP Package Name
+8. **Test defaults**: Create new scene, add VerticalCameraFollow + GeometryProjector, verify inspector values match RotationPOC
+9. **Run EditMode tests**: Verify SmoothingTests, DeadZoneTests, ProjectorPassTests all pass
