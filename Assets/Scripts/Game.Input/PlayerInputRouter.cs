@@ -15,7 +15,7 @@ namespace Game.Input
     {
         [Header("System References")]
         [SerializeField] private PlayerMotor motor;
-        [SerializeField] private ViewSwitchCoordinator viewSwitchCoordinator;
+        [SerializeField] private ViewSwitchCoordinator perspective;
 
         [Header("Legacy Support")]
         [SerializeField] private PerspectiveProjectionManager legacyPerspectiveManager;
@@ -24,7 +24,7 @@ namespace Game.Input
         {
             // Auto-find components if not assigned
             if (!motor) motor = FindFirstObjectByType<PlayerMotor>();
-            if (!viewSwitchCoordinator) viewSwitchCoordinator = FindFirstObjectByType<ViewSwitchCoordinator>();
+            if (!perspective) perspective = FindFirstObjectByType<ViewSwitchCoordinator>();
             if (!legacyPerspectiveManager) legacyPerspectiveManager = FindFirstObjectByType<PerspectiveProjectionManager>();
         }
 
@@ -44,9 +44,9 @@ namespace Game.Input
             if (!ctx.performed) return;
 
             // Prefer new ViewSwitchCoordinator over legacy system
-            if (viewSwitchCoordinator)
+            if (perspective)
             {
-                viewSwitchCoordinator.TogglePerspective();
+                perspective.TogglePerspective();
             }
             else if (legacyPerspectiveManager)
             {
@@ -54,7 +54,7 @@ namespace Game.Input
             }
             else
             {
-                Debug.LogWarning("[PlayerInputRouter] No view switching system found. Please assign ViewSwitchCoordinator or PerspectiveProjectionManager.");
+                Debug.LogWarning("[PlayerInputRouter] No view switching system found. Please assign ViewSwitchCoordinator (perspective field) or PerspectiveProjectionManager (legacyPerspectiveManager field).");
             }
         }
     }
