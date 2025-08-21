@@ -46,17 +46,23 @@ namespace Game.Level
         private readonly List<Renderer> sourceRenderers = new();
         private readonly List<Collider> sourceColliders = new();
 
+        // Pure utility (façade pattern)
+        private ProjectorPass _projectorPass;
+
         public Transform SourceRoot => sourceRoot;
         public Transform ProjectedRoot => projectedRoot;
 
         private void Awake()
         {
             CacheSourceLists();
+            _projectorPass = new ProjectorPass();
         }
 
         private void OnValidate()
         {
             CacheSourceLists();
+            if (_projectorPass == null)
+                _projectorPass = new ProjectorPass();
         }
 
         private void CacheSourceLists()
@@ -90,19 +96,9 @@ namespace Game.Level
 
         public void ClearProjected()
         {
-            if (projectedRoot == null) return;
-            for (int i = projectedRoot.childCount - 1; i >= 0; i--)
-            {
-                var child = projectedRoot.GetChild(i);
-#if UNITY_EDITOR
-                if (!Application.isPlaying)
-                    UnityEditor.Undo.DestroyObjectImmediate(child.gameObject);
-                else
-                    Object.Destroy(child.gameObject);
-#else
-                Object.Destroy(child.gameObject);
-#endif
-            }
+            if (_projectorPass == null)
+                _projectorPass = new ProjectorPass();
+            _projectorPass.Clear(projectedRoot);
         }
 
         public void Rebuild(ProjectionAxis axis)
@@ -120,90 +116,22 @@ namespace Game.Level
                 planeX = rotationCenter.position.x + planeXOffset;
             }
 
-            ClearProjected();
-
-            // Clone from MeshFilters so disabled MeshRenderers do not block geometry creation
-            var meshFilters = sourceRoot.GetComponentsInChildren<MeshFilter>(true);
-            foreach (var srcMF in meshFilters)
+            // Create context and delegate to ProjectorPass
+            var context = new ProjectorPassContext
             {
-                var srcGO = srcMF.gameObject;
-                var srcMR = srcGO.GetComponent<MeshRenderer>();
+                sourceRoot = sourceRoot,
+                projectedRoot = projectedRoot,
+                planeZ = planeZ,
+                planeX = planeX,
+                copyMaterials = copyMaterials,
+                projectedLayer = projectedLayer
+            };
 
-                // Create clone
-                var cloneGO = new GameObject($"Clone_{srcGO.name}");
-                cloneGO.transform.SetParent(projectedRoot, worldPositionStays: false);
-
-                // Copy world transform then flatten
-                cloneGO.transform.position = srcGO.transform.position;
-                cloneGO.transform.rotation = srcGO.transform.rotation;
-                cloneGO.transform.localScale = srcGO.transform.lossyScale;
-
-                var p = cloneGO.transform.position;
-                if (axis == ProjectionAxis.FlattenZ) p.z = planeZ; else p.x = planeX;
-                cloneGO.transform.position = p;
-
-                // Mesh
-                var mf = cloneGO.AddComponent<MeshFilter>();
-                mf.sharedMesh = srcMF.sharedMesh;
-
-                var mr = cloneGO.AddComponent<MeshRenderer>();
-                if (srcMR && copyMaterials)
-                {
-                    mr.sharedMaterials = srcMR.sharedMaterials;
-                    mr.shadowCastingMode = srcMR.shadowCastingMode;
-                    mr.receiveShadows = srcMR.receiveShadows;
-                    mr.lightProbeUsage = srcMR.lightProbeUsage;
-                    mr.reflectionProbeUsage = srcMR.reflectionProbeUsage;
-                    mr.allowOcclusionWhenDynamic = srcMR.allowOcclusionWhenDynamic;
-                }
-
-                // Colliders: copy common types
-                CloneSupportedColliders(srcGO, cloneGO);
-
-                // Layer
-                if (projectedLayer >= 0 && projectedLayer <= 31)
-                    SetLayerRecursively(cloneGO, projectedLayer);
-                else
-                    cloneGO.layer = srcGO.layer;
-            }
-        }
-
-        private void CloneSupportedColliders(GameObject src, GameObject dst)
-        {
-            foreach (var c in src.GetComponents<Collider>())
-            {
-                switch (c)
-                {
-                    case BoxCollider b:
-                        var nb = dst.AddComponent<BoxCollider>();
-                        nb.center = b.center;
-                        nb.size = b.size;
-                        nb.isTrigger = b.isTrigger;
-                        break;
-                    case CapsuleCollider cap:
-                        var ncap = dst.AddComponent<CapsuleCollider>();
-                        ncap.center = cap.center;
-                        ncap.radius = cap.radius;
-                        ncap.height = cap.height;
-                        ncap.direction = cap.direction;
-                        ncap.isTrigger = cap.isTrigger;
-                        break;
-                    case MeshCollider mc:
-                        var nmc = dst.AddComponent<MeshCollider>();
-                        nmc.sharedMesh = mc.sharedMesh;
-                        nmc.convex = mc.convex;
-                        nmc.cookingOptions = mc.cookingOptions;
-                        nmc.isTrigger = mc.isTrigger;
-                        break;
-                }
-            }
-        }
-
-        private static void SetLayerRecursively(GameObject go, int layer)
-        {
-            go.layer = layer;
-            for (int i = 0; i < go.transform.childCount; i++)
-                SetLayerRecursively(go.transform.GetChild(i).gameObject, layer);
+            if (_projectorPass == null)
+                _projectorPass = new ProjectorPass();
+            
+            _projectorPass.Clear(projectedRoot);
+            _projectorPass.Run(axis, context);
         }
 
         // Plane accessors and center setter
