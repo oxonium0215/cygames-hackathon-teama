@@ -5,7 +5,7 @@ namespace Game.Player
     /// <summary>
     /// Pure C# implementation of ground detection and jump timing logic.
     /// </summary>
-    public class GroundProbe : IGroundProbe
+    public class GroundProbe
     {
         private readonly float coyoteTime;
         private float lastGroundedTimer;

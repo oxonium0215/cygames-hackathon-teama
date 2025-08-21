@@ -3,10 +3,10 @@ using UnityEngine;
 namespace Game.Input
 {
     /// <summary>
-    /// Pure C# implementation of IPlayerInput that is updated via methods.
+    /// Pure C# implementation of player input that is updated via methods.
     /// Mirrors the current event-driven pattern while keeping logic simple.
     /// </summary>
-    public class UnityPlayerInput : IPlayerInput
+    public class UnityPlayerInput
     {
         private Vector2 move;
         private bool jumpHeld;
