@@ -10,7 +10,9 @@ namespace Game.Input
     [MovedFrom(true, sourceNamespace: "POC.Input", sourceClassName: "PlayerInputRouter")]
     public class PlayerInputRelay : MonoBehaviour
     {
+        [Tooltip("PlayerMotor component that receives movement and jump commands.")]
         [SerializeField] private PlayerMotor motor;
+        [Tooltip("PerspectiveProjectionManager used to check if perspective switching is active.")]
         [SerializeField] private PerspectiveProjectionManager perspective;
 
         private UnityPlayerInput playerInput;
@@ -29,7 +31,16 @@ namespace Game.Input
         public void OnMove(InputAction.CallbackContext ctx)
         {
             Vector2 moveValue = ctx.ReadValue<Vector2>();
+            
+            // Update adapter state regardless of suppression
             playerInput?.SetMove(moveValue);
+            
+            // Early-out: suppress lateral input during perspective switching if jump-only mode is enabled
+            if (perspective != null && perspective.IsSwitching && perspective.JumpOnlyDuringSwitch)
+            {
+                return; // Skip forwarding to motor, but jump input remains unaffected
+            }
+            
             motor?.SetMove(moveValue);
         }
 
@@ -50,7 +61,8 @@ namespace Game.Input
 
         public void OnSwitchView(InputAction.CallbackContext ctx)
         {
-            if (ctx.performed) perspective?.TogglePerspective();
+            if (ctx.performed) 
+                perspective?.TogglePerspective();
         }
     }
 }

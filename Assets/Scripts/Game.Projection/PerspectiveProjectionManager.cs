@@ -40,7 +40,8 @@ namespace Game.Projection
         [Header("Behavior")]
         [SerializeField] private bool rotatePlayerDuringSwitch = true;
         [SerializeField] private bool makePlayerKinematicDuringSwitch = true;
-        [SerializeField] private bool jumpOnlyDuringSwitch = true; // disable movement input
+        [Tooltip("When true, disable lateral movement input during perspective switches (jump remains enabled).")]
+        [SerializeField] private bool jumpOnlyDuringSwitch = true;
         [Tooltip("Keep the player's Y fixed to the pre-rotation height while rotating.")]
         [SerializeField] private bool fixYDuringRotation = true;
         [Tooltip("If overlapping during rotation, try to lift upward until clear (uses vertical-only depenetration).")]
@@ -62,6 +63,13 @@ namespace Game.Projection
         private IPlayerProjectionAdapter playerAdapter;
         private ICameraProjectionAdapter cameraAdapter;
         private IDepenetrationSolver depenetrationSolver;
+
+        // Read-only accessors for external components (e.g., input suppression)
+        /// <summary>Returns true if a perspective switch is currently in progress.</summary>
+        public bool IsSwitching => projectionController?.IsRotating ?? false;
+        
+        /// <summary>Returns the configured jump-only-during-switch setting.</summary>
+        public bool JumpOnlyDuringSwitch => jumpOnlyDuringSwitch;
 
         private void Start()
         {
