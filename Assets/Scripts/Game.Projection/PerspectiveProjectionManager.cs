@@ -62,7 +62,7 @@ namespace Game.Projection
         private ProjectionController projectionController;
         private PlayerProjectionAdapter playerAdapter;
         private CameraProjectionAdapter cameraAdapter;
-        private IDepenetrationSolver depenetrationSolver;
+        private DepenetrationSolver depenetrationSolver;
 
         // Read-only accessors for external components (e.g., input suppression)
         /// <summary>Returns true if a perspective switch is currently in progress.</summary>

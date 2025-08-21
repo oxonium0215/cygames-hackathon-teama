@@ -5,7 +5,7 @@ namespace Game.Projection
     /// <summary>
     /// Handles vertical-only depenetration with iteration caps and conservative fallback.
     /// </summary>
-    public class DepenetrationSolver : IDepenetrationSolver
+    public class DepenetrationSolver
     {
         private readonly float penetrationSkin;
         private readonly float overlapBoxInflation;
