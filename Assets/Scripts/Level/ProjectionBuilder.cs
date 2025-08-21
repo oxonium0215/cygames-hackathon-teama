@@ -1,17 +1,14 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Scripting.APIUpdating;
 
-namespace Game.Projection
+namespace POC.Level
 {
-    [MovedFrom("POC.Level")]
     public enum ProjectionAxis
     {
         FlattenZ, // Force z = planeZ
         FlattenX  // Force x = planeX
     }
 
-    [MovedFrom("POC.Level")]
     [DisallowMultipleComponent]
     public class ProjectionBuilder : MonoBehaviour
     {
@@ -37,7 +34,7 @@ namespace Game.Projection
         [Tooltip("Clone materials from sources if a MeshRenderer exists (even if disabled).")]
         [SerializeField] private bool copyMaterials = true;
         [Tooltip("Layer to assign to projected clones (e.g., Ground/Environment). -1 keeps source layer.")]
-        [SerializeField] private int projectedLayer = 3; // Default to Ground layer
+        [SerializeField] private int projectedLayer = -1;
         [Tooltip("Disable source colliders at runtime so only clones are used for physics.")]
         [SerializeField] private bool disableSourceColliders = true;
         [Tooltip("Hide source renderers during normal play (they are shown during camera rotation).")]

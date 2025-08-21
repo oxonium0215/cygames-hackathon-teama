@@ -1,13 +1,11 @@
 using UnityEngine;
-using UnityEngine.Scripting.APIUpdating;
 
-namespace Game.Camera
+namespace POC.Camera
 {
     // - Only moves along Y
     // - Moves up when the player exceeds a top dead zone window
     // - Never moves down (keeps the highest Y reached)
     // - Optional smoothing
-    [MovedFrom("POC.Camera")]
     public class VerticalCameraTracker : MonoBehaviour
     {
         [Header("Follow")]
@@ -38,13 +36,6 @@ namespace Game.Camera
         void Awake()
         {
             _maxPivotY = transform.position.y;
-            
-            // Auto-find player if not assigned
-            if (!followTarget)
-            {
-                var player = GameObject.FindGameObjectWithTag("Player");
-                if (player) followTarget = player.transform;
-            }
         }
 
         void LateUpdate()

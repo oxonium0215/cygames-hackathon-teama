@@ -1,12 +1,9 @@
 using UnityEngine;
-using UnityEngine.Scripting.APIUpdating;
 
-namespace Game.Player
+namespace POC.Gameplay
 {
-    [MovedFrom("POC.Gameplay")]
     public enum MovePlane { X, Z }
 
-    [MovedFrom("POC.Gameplay")]
     [RequireComponent(typeof(Rigidbody), typeof(Collider))]
     public class PlayerMotor : MonoBehaviour
     {
