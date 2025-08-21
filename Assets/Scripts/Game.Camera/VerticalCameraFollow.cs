@@ -39,22 +39,65 @@ namespace Game.Camera
         private IDeadZone _deadZonePolicy;
         private ISmoothing _constantSpeedSmoothing;
 
+        // Parameter snapshots for change detection (performance optimization)
+        private float _lastTopDeadZone = float.NaN;
+        private float _lastUpSpeed = float.NaN;
+        private bool _lastUseSmoothDamp;
+        private float _lastSmoothTime = float.NaN;
+        private float _lastSmoothMaxSpeed = float.NaN;
+
         void Awake()
         {
             _maxPivotY = transform.position.y;
             
             // Initialize pure utilities
-            _deadZonePolicy = new TopDeadZonePolicy(topDeadZone);
-            _constantSpeedSmoothing = new ConstantSpeedSmoothing(upSpeed);
+            EnsurePoliciesUpToDate();
+        }
+
+        void OnValidate()
+        {
+            // Enforce sane parameter ranges
+            topDeadZone = Mathf.Max(0f, topDeadZone);
+            upSpeed = Mathf.Max(0.01f, upSpeed);
+            smoothTime = Mathf.Max(0.01f, smoothTime);
+            smoothMaxSpeed = Mathf.Max(0.01f, smoothMaxSpeed);
+
+            // Trigger policy refresh in Edit mode
+            EnsurePoliciesUpToDate();
+        }
+
+        /// <summary>
+        /// Ensures policies are up to date, recreating them only when parameters have changed.
+        /// This prevents per-frame allocations while maintaining correct behavior.
+        /// </summary>
+        private void EnsurePoliciesUpToDate()
+        {
+            // Check if dead zone policy needs updating
+            if (_deadZonePolicy == null || _lastTopDeadZone != topDeadZone)
+            {
+                _deadZonePolicy = new TopDeadZonePolicy(topDeadZone);
+                _lastTopDeadZone = topDeadZone;
+            }
+
+            // Check if constant speed smoothing needs updating
+            if (_constantSpeedSmoothing == null || _lastUpSpeed != upSpeed)
+            {
+                _constantSpeedSmoothing = new ConstantSpeedSmoothing(upSpeed);
+                _lastUpSpeed = upSpeed;
+            }
+
+            // Update smoothing parameter snapshots (used for SmoothDamp)
+            _lastUseSmoothDamp = useSmoothDamp;
+            _lastSmoothTime = smoothTime;
+            _lastSmoothMaxSpeed = smoothMaxSpeed;
         }
 
         void LateUpdate()
         {
             if (!followTarget) return;
 
-            // Reinitialize utilities if parameters changed
-            _deadZonePolicy = new TopDeadZonePolicy(topDeadZone);
-            _constantSpeedSmoothing = new ConstantSpeedSmoothing(upSpeed);
+            // Ensure policies are up to date (only recreates if parameters changed)
+            EnsurePoliciesUpToDate();
 
             // Downward scrolling off
             var pos = transform.position;
