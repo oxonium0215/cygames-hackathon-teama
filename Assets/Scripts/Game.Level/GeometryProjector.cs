@@ -1,10 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Scripting.APIUpdating;
 
 namespace Game.Level
 {
-    [MovedFrom(true, sourceNamespace: "POC.Level")]
     public enum ProjectionAxis
     {
         FlattenZ, // Force z = planeZ
@@ -12,7 +10,6 @@ namespace Game.Level
     }
 
     [DisallowMultipleComponent]
-    [MovedFrom(true, sourceNamespace: "POC.Level", sourceClassName: "ProjectionBuilder")]
     public class GeometryProjector : MonoBehaviour
     {
         [Header("Hierarchy")]

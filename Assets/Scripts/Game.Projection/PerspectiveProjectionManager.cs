@@ -1,12 +1,10 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.Scripting.APIUpdating;
 using Game.Level;
 using Game.Player;
 
 namespace Game.Projection
 {
-    [MovedFrom(true, sourceNamespace: "POC.GameplayProjection")]
     public class PerspectiveProjectionManager : MonoBehaviour
     {
         [Header("References")]

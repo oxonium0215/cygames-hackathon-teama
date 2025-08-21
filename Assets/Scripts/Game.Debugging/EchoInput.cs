@@ -1,10 +1,8 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Scripting.APIUpdating;
 
 namespace Game.Debugging
 {
-    [MovedFrom(true, sourceNamespace: "", sourceClassName: "EchoInput")]
     public class EchoInput : MonoBehaviour
     {
         // Must be public and take InputAction.CallbackContext to appear under the "Dynamic" list.

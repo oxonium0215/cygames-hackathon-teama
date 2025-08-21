@@ -1,13 +1,10 @@
 using UnityEngine;
-using UnityEngine.Scripting.APIUpdating;
 
 namespace Game.Player
 {
-    [MovedFrom(true, sourceNamespace: "POC.Gameplay")]
     public enum MovePlane { X, Z }
 
     [RequireComponent(typeof(Rigidbody), typeof(Collider))]
-    [MovedFrom(true, sourceNamespace: "POC.Gameplay")]
     public partial class PlayerMotor : MonoBehaviour
     {
         [Header("Movement (Inertia)")]
