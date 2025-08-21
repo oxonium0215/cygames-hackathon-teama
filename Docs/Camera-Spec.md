@@ -84,12 +84,12 @@ Camera Pivot Y
 
 When the player moves above the top dead zone threshold, the camera follows to keep the player at the edge of the dead zone. The camera never moves down when `neverScrollDown` is enabled, creating a ratcheting upward movement that preserves the highest reached position.
 
-## Camera Adapter System
+## Camera System Implementation
 
-The camera uses a service-based architecture with `ICameraProjectionAdapter`:
+The camera system is directly integrated into `PerspectiveProjectionManager` with the following methods:
 
-- **RepositionPivotToCenter()**: Positions camera pivot at rotation center plus offset
-- **UpdateRotation()**: Interpolates camera yaw during perspective switches  
+- **RepositionCameraPivotToCenter()**: Positions camera pivot at rotation center plus offset
+- **UpdateCameraRotation()**: Interpolates camera yaw during perspective switches  
 - **SetCameraDistance()**: Positions child camera at specified distance from pivot
 
 ## Implementation Notes
@@ -97,4 +97,5 @@ The camera uses a service-based architecture with `ICameraProjectionAdapter`:
 - Camera pivot yaw is interpolated smoothly during perspective switches using the configured easing curve
 - The pivot is repositioned to the rotation center with applied offset before each switch
 - Child camera is positioned at the configured distance along the local forward axis
+- All camera operations are handled directly in PerspectiveProjectionManager for simplified architecture
 - All values shown reflect the current RotationPOC scene configuration
