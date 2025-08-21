@@ -14,6 +14,7 @@ namespace Game.Input
         [SerializeField] private PerspectiveProjectionManager perspective;
 
         private UnityPlayerInput playerInput;
+        private bool wasInputSuppressed;
 
         private void Awake()
         {
@@ -24,6 +25,15 @@ namespace Game.Input
         {
             // Clear transient flags once per frame
             playerInput?.ClearTransient();
+            
+            // Check if input suppression has ended and forward any held input
+            bool currentlySuppress = perspective != null && perspective.IsSwitching && perspective.JumpOnlyDuringSwitch;
+            if (wasInputSuppressed && !currentlySuppress && playerInput != null)
+            {
+                // Suppression just ended, forward any currently held input
+                motor?.SetMove(playerInput.Move);
+            }
+            wasInputSuppressed = currentlySuppress;
         }
 
         public void OnMove(InputAction.CallbackContext ctx)
