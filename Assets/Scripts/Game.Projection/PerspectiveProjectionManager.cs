@@ -59,10 +59,10 @@ namespace Game.Projection
         private Rigidbody playerRb;
         
         // Services
-        private IProjectionController projectionController;
-        private IPlayerProjectionAdapter playerAdapter;
-        private ICameraProjectionAdapter cameraAdapter;
-        private IDepenetrationSolver depenetrationSolver;
+        private ProjectionController projectionController;
+        private PlayerProjectionAdapter playerAdapter;
+        private CameraProjectionAdapter cameraAdapter;
+        private DepenetrationSolver depenetrationSolver;
 
         // Read-only accessors for external components (e.g., input suppression)
         /// <summary>Returns true if a perspective switch is currently in progress.</summary>

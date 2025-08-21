@@ -5,7 +5,7 @@ namespace Game.Projection
     /// <summary>
     /// Handles camera pivot adjustments during projection switches.
     /// </summary>
-    public class CameraProjectionAdapter : ICameraProjectionAdapter
+    public class CameraProjectionAdapter
     {
         private readonly Transform cameraPivot;
         

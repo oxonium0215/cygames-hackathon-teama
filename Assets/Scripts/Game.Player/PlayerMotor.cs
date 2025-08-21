@@ -50,8 +50,8 @@ namespace Game.Player
         private bool jumpHeld;
 
         // Services
-        private IGroundProbe groundProbe;
-        private IPlaneMotion planeMotion;
+        private GroundProbe groundProbe;
+        private PlaneMotion planeMotion;
 
         // Lateral axis logic
         private MovePlane activePlane = MovePlane.X;

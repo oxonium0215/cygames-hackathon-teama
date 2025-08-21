@@ -5,7 +5,7 @@ namespace Game.Player
     /// <summary>
     /// Pure C# implementation of lateral movement and landing slide logic.
     /// </summary>
-    public class PlaneMotion : IPlaneMotion
+    public class PlaneMotion
     {
         private readonly bool enableLandingSlide;
         private readonly float landingSlideDuration;
