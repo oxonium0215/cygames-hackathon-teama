@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Scripting.APIUpdating;
 
 namespace Game.Debugging
 {
