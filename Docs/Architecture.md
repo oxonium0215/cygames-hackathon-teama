@@ -241,6 +241,11 @@ Future improvements will include:
 - Enhanced core utilities in Game.Core
 - Additional service extractions as needed
 
+## Additional Documentation
+
+- **[Camera Specification](Camera-Spec.md)**: Detailed camera configuration and behavior documentation
+- **[Input Implementation Guide](Input-Implementation-Guide.md)**: Beginner-friendly guide for extending input functionality
+
 ## Verification
 
 To verify Phase 1 + 2B + 2C:
