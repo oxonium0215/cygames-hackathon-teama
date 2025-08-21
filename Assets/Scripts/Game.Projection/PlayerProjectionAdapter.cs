@@ -55,14 +55,14 @@ namespace Game.Projection
             player.EndRotationFreeze();
         }
         
-        public Vector3 MapVelocityBetweenAxes(Vector3 preRotationVelocity, ProjectionAxis sourceAxis, ProjectionAxis targetAxis)
+        public Vector3 MapVelocityBetweenAxes(Vector3 preRotationVelocity, Game.Level.ProjectionAxis sourceAxis, Game.Level.ProjectionAxis targetAxis)
         {
             // Map inertia: preserve lateral direction (no sign flip), preserve vertical velocity
-            float preLateral = (sourceAxis == ProjectionAxis.FlattenZ) ? preRotationVelocity.x : preRotationVelocity.z;
+            float preLateral = (sourceAxis == Game.Level.ProjectionAxis.FlattenZ) ? preRotationVelocity.x : preRotationVelocity.z;
             float newLateral = preLateral; // Keep direction as specified in original code
             
             Vector3 vFinal = Vector3.zero;
-            if (targetAxis == ProjectionAxis.FlattenZ) 
+            if (targetAxis == Game.Level.ProjectionAxis.FlattenZ) 
                 vFinal.x = newLateral; 
             else 
                 vFinal.z = newLateral;

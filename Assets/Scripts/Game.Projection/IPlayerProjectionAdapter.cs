@@ -1,5 +1,6 @@
 using UnityEngine;
 using Game.Player;
+using Game.Level;
 
 namespace Game.Projection
 {
@@ -30,7 +31,7 @@ namespace Game.Projection
         /// <param name="sourceAxis">Source projection axis</param>
         /// <param name="targetAxis">Target projection axis</param>
         /// <returns>Mapped velocity for target axis</returns>
-        Vector3 MapVelocityBetweenAxes(Vector3 preRotationVelocity, ProjectionAxis sourceAxis, ProjectionAxis targetAxis);
+        Vector3 MapVelocityBetweenAxes(Vector3 preRotationVelocity, Game.Level.ProjectionAxis sourceAxis, Game.Level.ProjectionAxis targetAxis);
         
         /// <summary>
         /// Updates player's active plane and plane lock settings.

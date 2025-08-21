@@ -131,7 +131,7 @@ namespace Game.Projection
             float startYaw = cameraPivot.eulerAngles.y;
             float targetYaw = (nextIndex == 0) ? viewAYaw : viewBYaw;
 
-            ProjectionAxis startAxis = GetProjectionForCurrent();
+            Game.Level.ProjectionAxis startAxis = GetProjectionForCurrent();
             Vector3 pStart = playerTransform.position;
             float fixedY = pStart.y;
 
