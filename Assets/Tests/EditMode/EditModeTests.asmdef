@@ -5,6 +5,8 @@
         "Game.Core",
         "Game.Player",
         "Game.Projection",
+        "Game.Camera",
+        "Game.Level",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
