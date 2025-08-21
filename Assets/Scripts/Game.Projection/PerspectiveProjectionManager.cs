@@ -422,6 +422,5 @@ namespace Game.Projection
         }
         
         #endregion
-        }
     }
 }
