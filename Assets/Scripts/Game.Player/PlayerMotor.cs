@@ -8,7 +8,7 @@ namespace Game.Player
 
     [RequireComponent(typeof(Rigidbody), typeof(Collider))]
     [MovedFrom(true, sourceNamespace: "POC.Gameplay")]
-    public class PlayerMotor : MonoBehaviour
+    public partial class PlayerMotor : MonoBehaviour
     {
         [Header("Movement (Inertia)")]
         [SerializeField] private float maxRunSpeed = 9f; // Updated to match RotationPOC.unity
