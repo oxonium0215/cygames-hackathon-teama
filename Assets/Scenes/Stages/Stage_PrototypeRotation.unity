@@ -1286,7 +1286,7 @@ MonoBehaviour:
   planeZOffset: -8.5
   planeXOffset: 8.5
   copyMaterials: 1
-  projectedLayer: -1
+  projectedLayer: 8
   disableSourceColliders: 1
   hideSourcesWhenIdle: 1
 --- !u!4 &1251402854
