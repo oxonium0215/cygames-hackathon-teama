@@ -36,8 +36,8 @@ namespace Game.Camera
         float _velY; // for SmoothDamp
 
         // Pure utilities (façade pattern)
-        private IDeadZone _deadZonePolicy;
-        private ISmoothing _constantSpeedSmoothing;
+        private TopDeadZonePolicy _deadZonePolicy;
+        private ConstantSpeedSmoothing _constantSpeedSmoothing;
 
         // Parameter snapshots for change detection (performance optimization)
         private float _lastTopDeadZone = float.NaN;

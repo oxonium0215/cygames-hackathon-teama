@@ -5,7 +5,7 @@ namespace Game.Camera
     /// <summary>
     /// Constant speed smoothing strategy using MoveTowards.
     /// </summary>
-    public class ConstantSpeedSmoothing : ISmoothing
+    public class ConstantSpeedSmoothing
     {
         private readonly float speed;
 

@@ -3,7 +3,7 @@ namespace Game.Camera
     /// <summary>
     /// Top dead zone policy for vertical camera following.
     /// </summary>
-    public class TopDeadZonePolicy : IDeadZone
+    public class TopDeadZonePolicy
     {
         private readonly float topDeadZone;
 

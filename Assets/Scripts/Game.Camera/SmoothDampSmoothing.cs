@@ -5,7 +5,7 @@ namespace Game.Camera
     /// <summary>
     /// SmoothDamp-based smoothing strategy.
     /// </summary>
-    public class SmoothDampSmoothing : ISmoothing
+    public class SmoothDampSmoothing
     {
         private readonly float smoothTime;
         private readonly float maxSpeed;
