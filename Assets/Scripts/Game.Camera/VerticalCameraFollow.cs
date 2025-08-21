@@ -8,7 +8,7 @@ namespace Game.Camera
     // - Never moves down (keeps the highest Y reached)
     // - Optional smoothing
     [MovedFrom(true, sourceNamespace: "POC.Camera", sourceClassName: "VerticalCameraTracker")]
-    public class VerticalCameraFollow : MonoBehaviour
+    public partial class VerticalCameraFollow : MonoBehaviour
     {
         [Header("Follow")]
         [Tooltip("Transform to follow (usually the Player).")]
