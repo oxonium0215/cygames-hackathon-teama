@@ -2,6 +2,177 @@ using System.Collections;
 using UnityEngine;
 using Game.Level;
 using Game.Player;
+using Game.Core;
+
+namespace Game.Projection
+{
+    /// <summary>
+    /// Handles player state management during projection switches.
+    /// </summary>
+    public class PlayerProjectionAdapter
+    {
+        private readonly PlayerMotor player;
+        private readonly Rigidbody playerRb;
+        
+        public PlayerProjectionAdapter(PlayerMotor player, Rigidbody playerRb)
+        {
+            this.player = player;
+            this.playerRb = playerRb;
+        }
+        
+        public bool PrepareForRotation(bool makeKinematic, bool jumpOnlyMode)
+        {
+            // Freeze motor and input
+            player.BeginRotationFreeze();
+            if (jumpOnlyMode) player.SetLateralEnabled(false);
+            
+            // Make kinematic during rotation
+            bool originalKinematic = false;
+            if (playerRb && makeKinematic)
+            {
+                originalKinematic = playerRb.isKinematic;
+                if (!originalKinematic)
+                {
+                    playerRb.linearVelocity = Vector3.zero;
+                    playerRb.angularVelocity = Vector3.zero;
+                    playerRb.isKinematic = true;
+                }
+            }
+            
+            return originalKinematic;
+        }
+        
+        public void RestoreAfterRotation(bool originalKinematic, bool jumpOnlyMode)
+        {
+            // Restore kinematic state
+            if (playerRb)
+            {
+                playerRb.isKinematic = originalKinematic;
+            }
+            
+            // Re-enable input
+            if (jumpOnlyMode) player.SetLateralEnabled(true);
+            
+            // Unfreeze motor
+            player.EndRotationFreeze();
+        }
+        
+        public Vector3 MapVelocityBetweenAxes(Vector3 preRotationVelocity, Game.Level.ProjectionAxis sourceAxis, Game.Level.ProjectionAxis targetAxis)
+        {
+            // Map inertia: preserve lateral direction (no sign flip), preserve vertical velocity
+            float preLateral = (sourceAxis == Game.Level.ProjectionAxis.FlattenZ) ? preRotationVelocity.x : preRotationVelocity.z;
+            float newLateral = preLateral; // Keep direction as specified in original code
+            
+            Vector3 vFinal = Vector3.zero;
+            if (targetAxis == Game.Level.ProjectionAxis.FlattenZ) 
+                vFinal.x = newLateral; 
+            else 
+                vFinal.z = newLateral;
+                
+            // Preserve vertical velocity for natural fall
+            vFinal.y = preRotationVelocity.y;
+            
+            return vFinal;
+        }
+        
+        public void SetPlayerPlane(MovePlane newPlane, float planeConstant)
+        {
+            player.ActivePlane = newPlane;
+            player.SetPlaneLock(newPlane, planeConstant);
+        }
+    }
+
+    /// <summary>
+    /// Handles camera pivot adjustments during projection switches.
+    /// </summary>
+    public class CameraProjectionAdapter
+    {
+        private readonly Transform cameraPivot;
+        
+        public CameraProjectionAdapter(Transform cameraPivot)
+        {
+            this.cameraPivot = cameraPivot;
+        }
+        
+        public void RepositionPivotToCenter(Transform rotationCenter, Vector3 pivotOffset)
+        {
+            if (!cameraPivot) return;
+            
+            Vector3 center = rotationCenter ? rotationCenter.position : cameraPivot.position - pivotOffset;
+            Vector3 target = center + pivotOffset;
+            
+            // Do not scroll down: preserve current (higher) Y if applicable (compatible with VerticalCameraFollow).
+            target.y = Mathf.Max(target.y, cameraPivot.position.y);
+            
+            cameraPivot.position = target;
+        }
+        
+        public void UpdateRotation(float startYaw, float targetYaw, float progress)
+        {
+            if (!cameraPivot) return;
+            
+            float deltaYaw = Mathf.DeltaAngle(startYaw, targetYaw);
+            float currentYaw = Mathf.LerpAngle(startYaw, startYaw + deltaYaw, progress);
+            
+            var eul = cameraPivot.eulerAngles;
+            eul.y = currentYaw;
+            cameraPivot.eulerAngles = eul;
+        }
+        
+        public void SetCameraDistance(float distance)
+        {
+            if (!cameraPivot || cameraPivot.childCount == 0) return;
+            
+            var cam = cameraPivot.GetChild(0);
+            cam.localPosition = new Vector3(0f, 0f, -Mathf.Abs(distance));
+            cam.localRotation = Quaternion.identity;
+        }
+    }
+
+    /// <summary>
+    /// Pure C# implementation of projection switching state and timing.
+    /// </summary>
+    public class ProjectionController
+    {
+        private float rotationTimer;
+        private float rotationDuration;
+        private AnimationCurve rotationEase;
+        private int targetIndex;
+        private bool rotating;
+        
+        public bool IsRotating => rotating;
+        
+        public void BeginSwitch(int targetIndex, float duration, AnimationCurve easeCurve)
+        {
+            this.targetIndex = targetIndex;
+            this.rotationDuration = duration;
+            this.rotationEase = easeCurve;
+            this.rotationTimer = 0f;
+            this.rotating = true;
+        }
+        
+        public float UpdateRotation(float deltaTime)
+        {
+            if (!rotating) return -1f;
+            
+            rotationTimer += deltaTime;
+            float t = rotationTimer / Mathf.Max(0.0001f, rotationDuration);
+            
+            if (t >= 1f)
+            {
+                rotating = false;
+                return 1f;
+            }
+            
+            return rotationEase != null ? rotationEase.Evaluate(Mathf.Clamp01(t)) : t;
+        }
+        
+        public void CompleteSwitch()
+        {
+            rotating = false;
+            rotationTimer = 0f;
+        }
+    }
 
 namespace Game.Projection
 {
@@ -221,7 +392,7 @@ namespace Game.Projection
             // Lock to new plane using PlayerProjectionAdapter
             var nextAxis = GetProjectionForCurrent();
             float planeConst = (nextAxis == Game.Level.ProjectionAxis.FlattenZ) ? seamZ : seamX;
-            Game.Player.MovePlane newPlane = (nextAxis == Game.Level.ProjectionAxis.FlattenZ) ? Game.Player.MovePlane.X : Game.Player.MovePlane.Z;
+            MovePlane newPlane = (nextAxis == Game.Level.ProjectionAxis.FlattenZ) ? MovePlane.X : MovePlane.Z;
             playerAdapter.SetPlayerPlane(newPlane, planeConst);
 
             // Post-rotation handling using DepenetrationSolver
@@ -284,7 +455,7 @@ namespace Game.Projection
 
             var axis = GetProjectionForCurrent();
             float planeConst = (axis == Game.Level.ProjectionAxis.FlattenZ) ? projectionBuilder.GetPlaneZ() : projectionBuilder.GetPlaneX();
-            Game.Player.MovePlane newPlane = (axis == Game.Level.ProjectionAxis.FlattenZ) ? Game.Player.MovePlane.X : Game.Player.MovePlane.Z;
+            MovePlane newPlane = (axis == Game.Level.ProjectionAxis.FlattenZ) ? MovePlane.X : MovePlane.Z;
             playerAdapter?.SetPlayerPlane(newPlane, planeConst);
 
             var p = playerTransform.position;

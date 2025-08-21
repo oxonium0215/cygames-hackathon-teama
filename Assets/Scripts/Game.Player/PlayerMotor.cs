@@ -1,8 +1,8 @@
 using UnityEngine;
+using Game.Core;
 
 namespace Game.Player
 {
-    public enum MovePlane { X, Z }
 
     [RequireComponent(typeof(Rigidbody), typeof(Collider))]
     public partial class PlayerMotor : MonoBehaviour
