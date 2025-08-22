@@ -164,6 +164,7 @@ namespace Game.Projection
             rotationTimer = 0f;
         }
     }
+}
 
 namespace Game.Projection
 {
