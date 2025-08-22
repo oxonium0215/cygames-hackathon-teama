@@ -176,7 +176,7 @@ namespace Game.Player
 
         private void FixedUpdate()
         {
-            // IMPORTANT: do nothing while rotating; the manager drives transform/overlaps.
+            // Do nothing while rotating; the manager drives transform/overlaps.
             if (rotationFrozen) return;
 
             // Keep on plane always

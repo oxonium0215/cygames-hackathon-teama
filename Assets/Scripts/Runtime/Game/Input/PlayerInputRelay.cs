@@ -43,7 +43,7 @@ namespace Game.Input
             // Update adapter state regardless of suppression
             playerInput?.SetMove(moveValue);
             
-            // Early-out: suppress lateral input during perspective switching if jump-only mode is enabled
+            // Suppress lateral input during perspective switching if jump-only mode is enabled
             if (perspective != null && perspective.IsSwitching && perspective.JumpOnlyDuringSwitch)
             {
                 return; // Skip forwarding to motor, but jump input remains unaffected
