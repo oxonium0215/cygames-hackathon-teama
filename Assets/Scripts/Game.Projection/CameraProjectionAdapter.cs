@@ -1,4 +1,5 @@
 using UnityEngine;
+using Game.Camera;
 
 namespace Game.Projection
 {
@@ -21,8 +22,15 @@ namespace Game.Projection
             Vector3 center = rotationCenter ? rotationCenter.position : cameraPivot.position - pivotOffset;
             Vector3 target = center + pivotOffset;
             
-            // Do not scroll down: preserve current (higher) Y if applicable (compatible with VerticalCameraFollow).
-            target.y = Mathf.Max(target.y, cameraPivot.position.y);
+            // Check if VerticalCameraFollow is configured to prevent downward scrolling
+            var verticalFollow = cameraPivot.GetComponent<VerticalCameraFollow>();
+            bool shouldPreventDownward = verticalFollow != null && verticalFollow.GetNeverScrollDown();
+            
+            // Preserve current (higher) Y if VerticalCameraFollow prevents downward scrolling
+            if (shouldPreventDownward)
+            {
+                target.y = Mathf.Max(target.y, cameraPivot.position.y);
+            }
             
             cameraPivot.position = target;
         }
