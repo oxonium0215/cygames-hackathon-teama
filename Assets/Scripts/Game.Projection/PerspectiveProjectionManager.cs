@@ -113,7 +113,7 @@ namespace Game.Projection
         {
             projectionController.BeginSwitch(nextIndex, rotateDuration, rotateEase);
 
-            // Clear previous projection state and reposition camera
+            // Clear previous projection state and prepare camera repositioning (deferred)
             projectionBuilder.ClearProjected();
             cameraAdapter.RepositionPivotToCenter(rotationCenter, pivotOffset);
 
@@ -167,6 +167,9 @@ namespace Game.Projection
             {
                 progress = projectionController.UpdateRotation(Time.deltaTime);
                 if (progress < 0f) break; // Complete
+                
+                // Apply deferred camera repositioning gradually during rotation
+                cameraAdapter.ApplyDeferredRepositioning();
                 
                 // Camera yaw using CameraProjectionAdapter
                 cameraAdapter.UpdateRotation(startYaw, targetYaw, progress);
@@ -262,6 +265,10 @@ namespace Game.Projection
                 float eased = rotateEase.Evaluate(Mathf.Clamp01(t));
                 float y = Mathf.LerpAngle(startY, startY + deltaYaw, eased);
                 var eul = cameraPivot.eulerAngles; eul.y = y; cameraPivot.eulerAngles = eul;
+                
+                // Apply deferred camera repositioning gradually during rotation
+                cameraAdapter.ApplyDeferredRepositioning();
+                
                 yield return null;
             }
         }

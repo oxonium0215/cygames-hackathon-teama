@@ -9,6 +9,7 @@ namespace Game.Projection
     public class CameraProjectionAdapter
     {
         private readonly Transform cameraPivot;
+        private Vector3? deferredTargetPosition;
         
         public CameraProjectionAdapter(Transform cameraPivot)
         {
@@ -31,15 +32,26 @@ namespace Game.Projection
             {
                 target.y = Mathf.Max(target.y, cameraPivot.position.y);
             }
-            else if (verticalFollow != null)
+            
+            // Instead of immediately repositioning, store the target for gradual movement
+            deferredTargetPosition = target;
+        }
+        
+        public void ApplyDeferredRepositioning()
+        {
+            if (!deferredTargetPosition.HasValue || !cameraPivot) return;
+            
+            Vector3 target = deferredTargetPosition.Value;
+            var verticalFollow = cameraPivot.GetComponent<VerticalCameraFollow>();
+            
+            if (verticalFollow != null && !verticalFollow.GetNeverScrollDown())
             {
-                // When VerticalCameraFollow allows downward movement, make Y changes more gradual
-                // to avoid conflicts with the follow system during perspective transitions
+                // Make Y changes gradual to avoid conflicts with VerticalCameraFollow
                 float currentY = cameraPivot.position.y;
                 float deltaY = target.y - currentY;
                 
-                // Limit large sudden Y changes to prevent jerking during transitions
-                const float maxYChangePerFrame = 1.5f;
+                // Limit Y changes to prevent sudden movements
+                const float maxYChangePerFrame = 1.0f;
                 if (Mathf.Abs(deltaY) > maxYChangePerFrame)
                 {
                     target.y = currentY + Mathf.Sign(deltaY) * maxYChangePerFrame;
@@ -47,6 +59,12 @@ namespace Game.Projection
             }
             
             cameraPivot.position = target;
+            
+            // Clear the deferred position if we've reached the target
+            if (Vector3.Distance(cameraPivot.position, deferredTargetPosition.Value) < 0.01f)
+            {
+                deferredTargetPosition = null;
+            }
         }
         
         public void UpdateRotation(float startYaw, float targetYaw, float progress)
