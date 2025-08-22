@@ -30,15 +30,10 @@ namespace Game.Level
         [SerializeField] private float planeZOffset = -8f;
         [SerializeField] private float planeXOffset = 8f;
 
-        [Header("Physics")]
-        [SerializeField] private bool disableSourceColliders = true;
-
         // Core transformation system
         private GeometryTransformer _geometryTransformer;
 
         public Transform SourceRoot => sourceRoot;
-        /// <summary>Returns sourceRoot for backward compatibility.</summary>
-        public Transform ProjectedRoot => sourceRoot;
 
         private void Awake()
         {
@@ -55,33 +50,6 @@ namespace Game.Level
         {
             _geometryTransformer?.Restore();
             _geometryTransformer?.Clear();
-        }
-
-        /// <summary>
-        /// Initialize the geometry projector.
-        /// </summary>
-        public void InitializeOnce()
-        {
-            if (disableSourceColliders)
-            {
-                SetSourceCollidersEnabled(false);
-            }
-        }
-
-        /// <summary>
-        /// Control source visibility.
-        /// </summary>
-        public void SetSourcesVisible(bool visible)
-        {
-            _geometryTransformer?.SetSourcesVisible(visible);
-        }
-
-        /// <summary>
-        /// Enable/disable source colliders.
-        /// </summary>
-        public void SetSourceCollidersEnabled(bool enabled)
-        {
-            _geometryTransformer?.SetSourceCollidersEnabled(enabled);
         }
 
         /// <summary>

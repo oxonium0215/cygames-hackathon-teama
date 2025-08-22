@@ -17,8 +17,6 @@ namespace Game.Level
     public class GeometryTransformer
     {
         private readonly Dictionary<Transform, Vector3> originalPositions = new();
-        private readonly Dictionary<Transform, bool> originalColliderStates = new();
-        private readonly Dictionary<Transform, bool> originalRendererStates = new();
         private ProjectionAxis currentAxis;
         private bool isTransformed = false;
 
@@ -41,7 +39,7 @@ namespace Game.Level
         }
 
         /// <summary>
-        /// Restore all geometry to their original positions and states.
+        /// Restore all geometry to their original positions.
         /// </summary>
         public void Restore()
         {
@@ -54,26 +52,6 @@ namespace Game.Level
                     kvp.Key.position = kvp.Value;
             }
 
-            foreach (var kvp in originalColliderStates)
-            {
-                if (kvp.Key != null)
-                {
-                    var collider = kvp.Key.GetComponent<Collider>();
-                    if (collider != null)
-                        collider.enabled = kvp.Value;
-                }
-            }
-
-            foreach (var kvp in originalRendererStates)
-            {
-                if (kvp.Key != null)
-                {
-                    var renderer = kvp.Key.GetComponent<Renderer>();
-                    if (renderer != null)
-                        renderer.enabled = kvp.Value;
-                }
-            }
-
             isTransformed = false;
         }
 
@@ -83,65 +61,21 @@ namespace Game.Level
         public void Clear()
         {
             originalPositions.Clear();
-            originalColliderStates.Clear();
-            originalRendererStates.Clear();
             isTransformed = false;
         }
 
         /// <summary>
-        /// Control visibility of source renderers.
-        /// </summary>
-        public void SetSourcesVisible(bool visible)
-        {
-            foreach (var kvp in originalRendererStates)
-            {
-                if (kvp.Key != null)
-                {
-                    var renderer = kvp.Key.GetComponent<Renderer>();
-                    if (renderer != null)
-                        renderer.enabled = visible;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Control collider state of source objects.
-        /// </summary>
-        public void SetSourceCollidersEnabled(bool enabled)
-        {
-            foreach (var kvp in originalColliderStates)
-            {
-                if (kvp.Key != null)
-                {
-                    var collider = kvp.Key.GetComponent<Collider>();
-                    if (collider != null)
-                        collider.enabled = enabled;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Store original transform positions and renderer/collider states before transformation.
+        /// Store original transform positions before transformation.
         /// </summary>
         private void StoreOriginalTransforms(Transform root)
         {
             originalPositions.Clear();
-            originalColliderStates.Clear();
-            originalRendererStates.Clear();
 
             var meshFilters = root.GetComponentsInChildren<MeshFilter>(true);
             foreach (var mf in meshFilters)
             {
                 var transform = mf.transform;
                 originalPositions[transform] = transform.position;
-
-                var collider = transform.GetComponent<Collider>();
-                if (collider != null)
-                    originalColliderStates[transform] = collider.enabled;
-
-                var renderer = transform.GetComponent<Renderer>();
-                if (renderer != null)
-                    originalRendererStates[transform] = renderer.enabled;
             }
         }
 
