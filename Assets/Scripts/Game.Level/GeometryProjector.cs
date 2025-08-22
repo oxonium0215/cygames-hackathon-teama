@@ -9,12 +9,16 @@ namespace Game.Level
         FlattenX  // Force x = planeX
     }
 
+    /// <summary>
+    /// Handles geometry projection for perspective switching using in-place transformation.
+    /// Transforms original terrain objects directly instead of creating clones.
+    /// This preserves object identity for checkpoints, warps, and other interactive elements.
+    /// </summary>
     [DisallowMultipleComponent]
     public class GeometryProjector : MonoBehaviour
     {
         [Header("Hierarchy")]
         [SerializeField] private Transform sourceRoot;
-        [SerializeField] private Transform projectedRoot;  // DEPRECATED: kept for compatibility
 
         [Header("Center/Planes")]
         [SerializeField] private Transform rotationCenter;
@@ -25,32 +29,23 @@ namespace Game.Level
         [SerializeField] private float planeZOffset = -8.5f;
         [SerializeField] private float planeXOffset = 8.5f;
 
-        [Header("Rendering/Physics")]
-#pragma warning disable 0414
-        [SerializeField] private bool copyMaterials = true;        // DEPRECATED
-        [SerializeField] private int projectedLayer = -1;         // DEPRECATED  
-#pragma warning restore 0414
+        [Header("Physics")]
         [SerializeField] private bool disableSourceColliders = true;
-        [SerializeField] private bool hideSourcesWhenIdle = true; // DEPRECATED in new system
 
-        private readonly List<Renderer> sourceRenderers = new();
-        private readonly List<Collider> sourceColliders = new();
-
-        // Use geometry transformer instead of projector pass
+        // Core transformation system
         private GeometryTransformer _geometryTransformer;
 
         public Transform SourceRoot => sourceRoot;
-        public Transform ProjectedRoot => sourceRoot; // Same as sourceRoot since we transform in-place
+        /// <summary>Returns sourceRoot for compatibility - in new system, sources are the active geometry</summary>
+        public Transform ProjectedRoot => sourceRoot;
 
         private void Awake()
         {
-            CacheSourceLists();
             _geometryTransformer = new GeometryTransformer();
         }
 
         private void OnValidate()
         {
-            CacheSourceLists();
             if (_geometryTransformer == null)
                 _geometryTransformer = new GeometryTransformer();
         }
@@ -61,52 +56,36 @@ namespace Game.Level
             _geometryTransformer?.Clear();
         }
 
-        private void CacheSourceLists()
-        {
-            sourceRenderers.Clear();
-            sourceColliders.Clear();
-
-            if (sourceRoot == null) return;
-
-            sourceRenderers.AddRange(sourceRoot.GetComponentsInChildren<Renderer>(true));
-            sourceColliders.AddRange(sourceRoot.GetComponentsInChildren<Collider>(true));
-        }
-
+        /// <summary>
+        /// Initialize the geometry projector. In the new system, sources remain active and visible.
+        /// </summary>
         public void InitializeOnce()
         {
-            // In the new system, sources are the active geometry and should remain visible and collidable
-            // Only disable if explicitly configured to do so
-            if (disableSourceColliders) SetSourceCollidersEnabled(false);
+            if (disableSourceColliders)
+            {
+                SetSourceCollidersEnabled(false);
+            }
         }
 
+        /// <summary>
+        /// Control source visibility. In the new system, sources are the active geometry.
+        /// </summary>
         public void SetSourcesVisible(bool visible)
         {
-            if (_geometryTransformer != null)
-            {
-                // In the new system, sources are the active geometry and should generally stay visible
-                _geometryTransformer.SetSourcesVisible(visible);
-            }
-            else
-            {
-                foreach (var r in sourceRenderers)
-                    if (r) r.enabled = visible;
-            }
+            _geometryTransformer?.SetSourcesVisible(visible);
         }
 
+        /// <summary>
+        /// Enable/disable source colliders. In the new system, source colliders are the active physics geometry.
+        /// </summary>
         public void SetSourceCollidersEnabled(bool enabled)
         {
-            if (_geometryTransformer != null)
-            {
-                // In the new system, source colliders are the active physics geometry
-                _geometryTransformer.SetSourceCollidersEnabled(enabled);
-            }
-            else
-            {
-                foreach (var c in sourceColliders)
-                    if (c) c.enabled = enabled;
-            }
+            _geometryTransformer?.SetSourceCollidersEnabled(enabled);
         }
 
+        /// <summary>
+        /// Clear projection state and restore original positions.
+        /// </summary>
         public void ClearProjected()
         {
             if (_geometryTransformer == null)
@@ -114,6 +93,9 @@ namespace Game.Level
             _geometryTransformer.Restore();
         }
 
+        /// <summary>
+        /// Rebuild geometry projection for the specified axis using in-place transformation.
+        /// </summary>
         public void Rebuild(ProjectionAxis axis)
         {
             if (sourceRoot == null)
@@ -142,7 +124,7 @@ namespace Game.Level
             _geometryTransformer.Transform(axis, context);
         }
 
-        // Plane accessors and center setter
+        // Plane accessors and center configuration
         public void SetPlaneZ(float value) => planeZ = value;
         public void SetPlaneX(float value) => planeX = value;
         public float GetPlaneZ() => planeZ;
@@ -150,7 +132,9 @@ namespace Game.Level
         public void SetRotationCenter(Transform t) => rotationCenter = t;
         public Transform GetRotationCenter() => rotationCenter;
 
-        // Offsets
+        /// <summary>
+        /// Set plane offsets relative to rotation center.
+        /// </summary>
         public void SetPlaneOffsets(float zOffset, float xOffset)
         {
             planeZOffset = zOffset;

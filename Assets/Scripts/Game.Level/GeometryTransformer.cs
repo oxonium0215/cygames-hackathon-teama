@@ -88,6 +88,9 @@ namespace Game.Level
             isTransformed = false;
         }
 
+        /// <summary>
+        /// Control visibility of source renderers. In the new system, sources are the active geometry.
+        /// </summary>
         public void SetSourcesVisible(bool visible)
         {
             foreach (var kvp in originalRendererStates)
@@ -101,6 +104,9 @@ namespace Game.Level
             }
         }
 
+        /// <summary>
+        /// Control collider state of source objects. In the new system, source colliders are the active physics geometry.
+        /// </summary>
         public void SetSourceCollidersEnabled(bool enabled)
         {
             foreach (var kvp in originalColliderStates)
@@ -114,6 +120,9 @@ namespace Game.Level
             }
         }
 
+        /// <summary>
+        /// Store original transform positions and renderer/collider states before transformation.
+        /// </summary>
         private void StoreOriginalTransforms(Transform root)
         {
             originalPositions.Clear();
@@ -136,6 +145,9 @@ namespace Game.Level
             }
         }
 
+        /// <summary>
+        /// Apply position transformation to flatten geometry onto specified projection plane.
+        /// </summary>
         private void ApplyProjectionTransform(ProjectionAxis axis, TransformationContext context)
         {
             foreach (var kvp in originalPositions)
