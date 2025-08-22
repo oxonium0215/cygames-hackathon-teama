@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Game.Input;
 using Game.Player;
 using Game.Projection;
 
