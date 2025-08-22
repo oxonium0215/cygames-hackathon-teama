@@ -1,9 +1,8 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using Game.Player;
 using Game.Projection;
 
-namespace Game.Input
+namespace Game.Player
 {
     // Routes UnityEvents from PlayerInput to gameplay components
     public class PlayerInputRelay : MonoBehaviour

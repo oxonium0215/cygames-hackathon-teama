@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Game.Projection
+namespace Game.Camera
 {
     /// <summary>
     /// Handles camera pivot adjustments during projection switches.

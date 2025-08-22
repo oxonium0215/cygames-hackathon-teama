@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Game.Projection
+namespace Game.Player
 {
     /// <summary>
     /// Handles vertical-only depenetration with iteration caps and conservative fallback.

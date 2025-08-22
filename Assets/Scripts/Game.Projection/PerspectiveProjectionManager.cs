@@ -2,6 +2,7 @@ using System.Collections;
 using UnityEngine;
 using Game.Level;
 using Game.Player;
+using Game.Camera;
 
 namespace Game.Projection
 {

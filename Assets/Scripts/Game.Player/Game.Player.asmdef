@@ -2,7 +2,8 @@
     "name": "Game.Player",
     "rootNamespace": "Game.Player",
     "references": [
-        "Game.Core"
+        "Unity.InputSystem",
+        "Game.Projection"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

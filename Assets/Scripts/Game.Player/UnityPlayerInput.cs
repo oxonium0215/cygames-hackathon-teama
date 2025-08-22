@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Game.Input
+namespace Game.Player
 {
     /// <summary>
     /// Pure C# implementation of player input that is updated via methods.

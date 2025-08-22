@@ -2,9 +2,9 @@
     "name": "Game.Projection",
     "rootNamespace": "Game.Projection",
     "references": [
-        "Game.Core",
         "Game.Player",
-        "Game.Level"
+        "Game.Level",
+        "Game.Camera"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

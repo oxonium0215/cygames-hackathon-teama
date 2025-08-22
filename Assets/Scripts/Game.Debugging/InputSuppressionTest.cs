@@ -1,5 +1,5 @@
 using UnityEngine;
-using Game.Input;
+using Game.Player;
 using Game.Projection;
 
 namespace Game.Debugging
