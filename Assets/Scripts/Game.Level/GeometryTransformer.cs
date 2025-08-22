@@ -103,6 +103,7 @@ namespace Game.Level
 
         /// <summary>
         /// Set visibility of source renderers.
+        /// In the new in-place transformation system, sources are generally kept visible.
         /// </summary>
         public void SetSourcesVisible(bool visible)
         {
@@ -112,13 +113,18 @@ namespace Game.Level
                 {
                     var renderer = kvp.Key.GetComponent<Renderer>();
                     if (renderer != null)
+                    {
+                        // In the new system, we generally keep sources visible since they're the active geometry
+                        // Only hide them if explicitly requested (e.g., during destruction or special debug cases)
                         renderer.enabled = visible;
+                    }
                 }
             }
         }
 
         /// <summary>
         /// Set collision state of source colliders.
+        /// In the new system, colliders should generally remain enabled since sources are the active geometry.
         /// </summary>
         public void SetSourceCollidersEnabled(bool enabled)
         {

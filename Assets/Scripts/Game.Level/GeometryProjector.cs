@@ -31,13 +31,13 @@ namespace Game.Level
         [SerializeField] private float planeXOffset = 8.5f;
 
         [Header("Rendering/Physics")]
-        [Tooltip("Clone materials from sources if a MeshRenderer exists (even if disabled).")]
+        [Tooltip("Clone materials from sources if a MeshRenderer exists (even if disabled). DEPRECATED in new system.")]
         [SerializeField] private bool copyMaterials = true;
-        [Tooltip("Layer to assign to projected clones (e.g., Ground/Environment). -1 keeps source layer.")]
+        [Tooltip("Layer to assign to projected clones (e.g., Ground/Environment). DEPRECATED in new system.")]
         [SerializeField] private int projectedLayer = -1;
-        [Tooltip("Disable source colliders at runtime so only clones are used for physics.")]
+        [Tooltip("Disable source colliders at runtime. In new system, sources remain active for physics.")]
         [SerializeField] private bool disableSourceColliders = true;
-        [Tooltip("Hide source renderers during normal play (they are shown during camera rotation).")]
+        [Tooltip("Hide source renderers during normal play. In new system, sources remain visible as active geometry.")]
         [SerializeField] private bool hideSourcesWhenIdle = true;
 
         private readonly List<Renderer> sourceRenderers = new();
@@ -82,6 +82,8 @@ namespace Game.Level
 
         public void InitializeOnce()
         {
+            // In the new system, sources should generally be enabled for collision and rendering
+            // since they are the active geometry. Keep existing interface for compatibility.
             if (hideSourcesWhenIdle) SetSourcesVisible(false);
             if (disableSourceColliders) SetSourceCollidersEnabled(false);
         }
@@ -90,11 +92,15 @@ namespace Game.Level
         {
             if (_geometryTransformer != null)
             {
-                _geometryTransformer.SetSourcesVisible(visible);
+                // In the new system, we generally keep sources visible since they are the active geometry
+                // We only honor 'visible=false' requests during special cases (like destruction)
+                // or if hideSourcesWhenIdle is explicitly disabled
+                bool shouldBeVisible = visible || (!hideSourcesWhenIdle);
+                _geometryTransformer.SetSourcesVisible(shouldBeVisible);
             }
             else
             {
-                // Fallback to manual control
+                // Fallback to manual control for backward compatibility
                 foreach (var r in sourceRenderers)
                     if (r) r.enabled = visible;
             }
@@ -104,11 +110,14 @@ namespace Game.Level
         {
             if (_geometryTransformer != null)
             {
-                _geometryTransformer.SetSourceCollidersEnabled(enabled);
+                // In the new system, source colliders should generally remain enabled 
+                // since they are the active physics geometry
+                bool shouldBeEnabled = enabled || (!disableSourceColliders);
+                _geometryTransformer.SetSourceCollidersEnabled(shouldBeEnabled);
             }
             else
             {
-                // Fallback to manual control
+                // Fallback to manual control for backward compatibility
                 foreach (var c in sourceColliders)
                     if (c) c.enabled = enabled;
             }
