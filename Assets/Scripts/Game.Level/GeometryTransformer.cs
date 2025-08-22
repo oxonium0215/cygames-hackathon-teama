@@ -11,7 +11,7 @@ namespace Game.Level
     }
 
     /// <summary>
-    /// Handles in-place transformation of geometry instead of cloning.
+    /// Handles in-place transformation of geometry.
     /// Maintains original object identity for checkpoints, warps, and other interactive elements.
     /// </summary>
     public class GeometryTransformer
@@ -89,7 +89,7 @@ namespace Game.Level
         }
 
         /// <summary>
-        /// Control visibility of source renderers. In the new system, sources are the active geometry.
+        /// Control visibility of source renderers.
         /// </summary>
         public void SetSourcesVisible(bool visible)
         {
@@ -105,7 +105,7 @@ namespace Game.Level
         }
 
         /// <summary>
-        /// Control collider state of source objects. In the new system, source colliders are the active physics geometry.
+        /// Control collider state of source objects.
         /// </summary>
         public void SetSourceCollidersEnabled(bool enabled)
         {
