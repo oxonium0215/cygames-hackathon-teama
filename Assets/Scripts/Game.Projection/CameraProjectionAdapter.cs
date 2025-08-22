@@ -21,9 +21,6 @@ namespace Game.Projection
             Vector3 center = rotationCenter ? rotationCenter.position : cameraPivot.position - pivotOffset;
             Vector3 target = center + pivotOffset;
             
-            // Do not scroll down: preserve current (higher) Y if applicable (compatible with VerticalCameraFollow).
-            target.y = Mathf.Max(target.y, cameraPivot.position.y);
-            
             cameraPivot.position = target;
         }
         

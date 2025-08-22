@@ -4,7 +4,7 @@ namespace Game.Camera
 {
     // - Only moves along Y
     // - Moves up when the player exceeds a top dead zone window
-    // - Never moves down (keeps the highest Y reached)
+    // - Can move down to follow player downward movement
     // - Optional smoothing
     public partial class VerticalCameraFollow : MonoBehaviour
     {
@@ -28,7 +28,7 @@ namespace Game.Camera
 
         [Header("Behavior")]
         [Tooltip("Prevents the camera from ever moving down once it has moved up.")]
-        [SerializeField] private bool neverScrollDown = true;
+        [SerializeField] private bool neverScrollDown = false;
 
         float _maxPivotY;
         float _velY; // for SmoothDamp
@@ -97,25 +97,37 @@ namespace Game.Camera
             // Ensure policies are up to date (only recreates if parameters changed)
             EnsurePoliciesUpToDate();
 
-            // Downward scrolling off
+            // Handle legacy neverScrollDown behavior for backward compatibility
             var pos = transform.position;
             if (neverScrollDown && pos.y < _maxPivotY)
             {
                 pos.y = _maxPivotY;
                 transform.position = pos;
+                return; // Skip normal following logic when using legacy mode
             }
 
-            // Check if player is above the top dead zone using dead zone policy
             float pivotY = transform.position.y;
             float playerY = followTarget.position.y;
             float thresholdY = _deadZonePolicy.ComputeThreshold(pivotY);
 
-            if (playerY > thresholdY)
-            {
-                // Desired Y keeps the player exactly at the top edge of the dead zone
-                float desiredY = _deadZonePolicy.ComputeDesiredY(playerY);
-                float newY;
+            // Check if we should follow (upward with dead zone, or any downward movement)
+            bool shouldFollow = (playerY > thresholdY) || (!neverScrollDown && playerY < pivotY);
 
+            if (shouldFollow)
+            {
+                float desiredY;
+                if (playerY > thresholdY)
+                {
+                    // Follow upward with dead zone offset
+                    desiredY = _deadZonePolicy.ComputeDesiredY(playerY);
+                }
+                else
+                {
+                    // Follow downward directly (no dead zone)
+                    desiredY = playerY;
+                }
+
+                float newY;
                 if (useSmoothDamp)
                 {
                     newY = Mathf.SmoothDamp(pivotY, desiredY, ref _velY, smoothTime, smoothMaxSpeed, Time.deltaTime);
@@ -126,27 +138,15 @@ namespace Game.Camera
                     newY = _constantSpeedSmoothing.ComputeNewY(pivotY, desiredY, Time.deltaTime);
                 }
 
-                // Enforce upward-only rule
+                // Enforce upward-only rule for legacy mode
                 if (neverScrollDown) newY = Mathf.Max(newY, pivotY);
 
                 pos.y = newY;
                 transform.position = pos;
 
-                // Update the max pivot Y reached
+                // Update the max pivot Y reached (legacy behavior)
                 if (neverScrollDown && newY > _maxPivotY)
                     _maxPivotY = newY;
-            } else
-            {
-                // Player is inside or below the dead zone
-                if (neverScrollDown)
-                {
-                    // If something external lowered player , bounce back up to max
-                    if (transform.position.y < _maxPivotY)
-                    {
-                        pos.y = _maxPivotY;
-                        transform.position = pos;
-                    }
-                }
             }
         }
 
