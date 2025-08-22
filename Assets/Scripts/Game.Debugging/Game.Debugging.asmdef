@@ -5,7 +5,8 @@
         "Game.Core",
         "Unity.InputSystem",
         "Game.Input",
-        "Game.Projection"
+        "Game.Projection",
+        "Game.Level"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
