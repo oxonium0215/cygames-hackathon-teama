@@ -87,7 +87,6 @@ namespace Game.Projection
                 playerCollider = playerTransform.GetComponent<Collider>();
 
             if (rotationCenter) projectionBuilder.SetRotationCenter(rotationCenter);
-            projectionBuilder.InitializeOnce();
 
             if (playerTransform) playerRb = playerTransform.GetComponent<Rigidbody>();
 

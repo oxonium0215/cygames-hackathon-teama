@@ -1217,7 +1217,6 @@ MonoBehaviour:
   planeX: 0
   planeZOffset: -8
   planeXOffset: 8
-  disableSourceColliders: 1
 --- !u!4 &1251402854
 Transform:
   m_ObjectHideFlags: 0
