@@ -18,7 +18,7 @@ namespace Game.Level
     public class GeometryProjector : MonoBehaviour
     {
         [Header("Hierarchy")]
-        [SerializeField] private Transform sourceRoot;
+        [SerializeField] private Transform terrainRoot;
 
         [Header("Center/Planes")]
         [SerializeField] private Transform rotationCenter;
@@ -35,9 +35,13 @@ namespace Game.Level
         // Core transformation system
         private GeometryTransformer _geometryTransformer;
 
-        public Transform SourceRoot => sourceRoot;
-        /// <summary>Returns sourceRoot for compatibility - in new system, sources are the active geometry</summary>
-        public Transform ProjectedRoot => sourceRoot;
+        public Transform TerrainRoot => terrainRoot;
+        /// <summary>Returns terrainRoot for compatibility - terrain objects are transformed in-place</summary>
+        public Transform ProjectedRoot => terrainRoot;
+        
+        // Legacy compatibility properties
+        /// <summary>Legacy compatibility - use TerrainRoot instead</summary>
+        public Transform SourceRoot => terrainRoot;
 
         private void Awake()
         {
@@ -63,24 +67,24 @@ namespace Game.Level
         {
             if (disableSourceColliders)
             {
-                SetSourceCollidersEnabled(false);
+                SetTerrainCollidersEnabled(false);
             }
         }
 
         /// <summary>
-        /// Control source visibility. In the new system, sources are the active geometry.
+        /// Control terrain visibility. Terrain objects are transformed in-place.
         /// </summary>
-        public void SetSourcesVisible(bool visible)
+        public void SetTerrainVisible(bool visible)
         {
-            _geometryTransformer?.SetSourcesVisible(visible);
+            _geometryTransformer?.SetTerrainVisible(visible);
         }
 
         /// <summary>
-        /// Enable/disable source colliders. In the new system, source colliders are the active physics geometry.
+        /// Enable/disable terrain colliders. Terrain colliders are the active physics geometry.
         /// </summary>
-        public void SetSourceCollidersEnabled(bool enabled)
+        public void SetTerrainCollidersEnabled(bool enabled)
         {
-            _geometryTransformer?.SetSourceCollidersEnabled(enabled);
+            _geometryTransformer?.SetTerrainCollidersEnabled(enabled);
         }
 
         /// <summary>
@@ -98,9 +102,9 @@ namespace Game.Level
         /// </summary>
         public void Rebuild(ProjectionAxis axis)
         {
-            if (sourceRoot == null)
+            if (terrainRoot == null)
             {
-                Debug.LogWarning("[GeometryProjector] SourceRoot not set.");
+                Debug.LogWarning("[GeometryProjector] TerrainRoot not set.");
                 return;
             }
 
@@ -113,7 +117,7 @@ namespace Game.Level
 
             var context = new TransformationContext
             {
-                sourceRoot = sourceRoot,
+                terrainRoot = terrainRoot,
                 planeZ = planeZ,
                 planeX = planeX
             };
@@ -140,5 +144,12 @@ namespace Game.Level
             planeZOffset = zOffset;
             planeXOffset = xOffset;
         }
+        
+        // Legacy compatibility methods
+        /// <summary>Legacy compatibility - use SetTerrainVisible instead</summary>
+        public void SetSourcesVisible(bool visible) => SetTerrainVisible(visible);
+        
+        /// <summary>Legacy compatibility - use SetTerrainCollidersEnabled instead</summary>
+        public void SetSourceCollidersEnabled(bool enabled) => SetTerrainCollidersEnabled(enabled);
     }
 }

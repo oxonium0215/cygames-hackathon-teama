@@ -5,7 +5,7 @@ namespace Game.Level
 {
     public struct TransformationContext
     {
-        public Transform sourceRoot;
+        public Transform terrainRoot;
         public float planeZ;
         public float planeX;
     }
@@ -27,13 +27,13 @@ namespace Game.Level
         /// </summary>
         public void Transform(ProjectionAxis axis, TransformationContext context)
         {
-            if (context.sourceRoot == null)
+            if (context.terrainRoot == null)
                 return;
 
             if (isTransformed)
                 Restore();
 
-            StoreOriginalTransforms(context.sourceRoot);
+            StoreOriginalTransforms(context.terrainRoot);
             ApplyProjectionTransform(axis, context);
 
             currentAxis = axis;
@@ -89,9 +89,9 @@ namespace Game.Level
         }
 
         /// <summary>
-        /// Control visibility of source renderers. In the new system, sources are the active geometry.
+        /// Control visibility of terrain renderers. Terrain objects are transformed in-place.
         /// </summary>
-        public void SetSourcesVisible(bool visible)
+        public void SetTerrainVisible(bool visible)
         {
             foreach (var kvp in originalRendererStates)
             {
@@ -105,9 +105,9 @@ namespace Game.Level
         }
 
         /// <summary>
-        /// Control collider state of source objects. In the new system, source colliders are the active physics geometry.
+        /// Control collider state of terrain objects. Terrain colliders are the active physics geometry.
         /// </summary>
-        public void SetSourceCollidersEnabled(bool enabled)
+        public void SetTerrainCollidersEnabled(bool enabled)
         {
             foreach (var kvp in originalColliderStates)
             {
@@ -168,5 +168,12 @@ namespace Game.Level
             Physics.SyncTransforms();
 #endif
         }
+        
+        // Legacy compatibility methods
+        /// <summary>Legacy compatibility - use SetTerrainVisible instead</summary>
+        public void SetSourcesVisible(bool visible) => SetTerrainVisible(visible);
+        
+        /// <summary>Legacy compatibility - use SetTerrainCollidersEnabled instead</summary>
+        public void SetSourceCollidersEnabled(bool enabled) => SetTerrainCollidersEnabled(enabled);
     }
 }

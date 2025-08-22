@@ -10,7 +10,7 @@ namespace Game.Projection
         [Header("References")]
         [SerializeField] private Transform rotationCenter;
         [SerializeField] private Transform cameraPivot;
-        [SerializeField] private GeometryProjector projectionBuilder;
+        [SerializeField] private GeometryProjector geometryProjector;
         [SerializeField] private PlayerMotor player;
         [SerializeField] private Transform playerTransform;
         [SerializeField] private Collider playerCollider; // used to resolve overlaps
@@ -71,7 +71,7 @@ namespace Game.Projection
 
         private void Start()
         {
-            if (!projectionBuilder || !cameraPivot)
+            if (!geometryProjector || !cameraPivot)
             {
                 Debug.LogError("[PerspectiveProjectionManager] Missing GeometryProjector or CameraPivot.");
                 enabled = false;
@@ -85,8 +85,8 @@ namespace Game.Projection
             if (!playerCollider && playerTransform)
                 playerCollider = playerTransform.GetComponent<Collider>();
 
-            if (rotationCenter) projectionBuilder.SetRotationCenter(rotationCenter);
-            projectionBuilder.InitializeOnce();
+            if (rotationCenter) geometryProjector.SetRotationCenter(rotationCenter);
+            geometryProjector.InitializeOnce();
 
             if (playerTransform) playerRb = playerTransform.GetComponent<Rigidbody>();
 
@@ -113,7 +113,7 @@ namespace Game.Projection
             projectionController.BeginSwitch(nextIndex, rotateDuration, rotateEase);
 
             // Clear previous projection state and reposition camera
-            projectionBuilder.ClearProjected();
+            geometryProjector.ClearProjected();
             cameraAdapter.RepositionPivotToCenter(rotationCenter, pivotOffset);
 
             // If no player, rotate camera only
@@ -140,8 +140,8 @@ namespace Game.Projection
             Vector3 pStart = playerTransform.position;
             float fixedY = pStart.y;
 
-            float seamZ = projectionBuilder.GetPlaneZ();
-            float seamX = projectionBuilder.GetPlaneX();
+            float seamZ = geometryProjector.GetPlaneZ();
+            float seamX = geometryProjector.GetPlaneX();
 
             // Inverse-of-projection lateral coordinates (constant during rotation)
             float preX = pStart.x;
@@ -280,7 +280,7 @@ namespace Game.Projection
             if (!playerCollider && playerTransform) playerCollider = playerTransform.GetComponent<Collider>();
 
             var axis = GetProjectionForCurrent();
-            float planeConst = (axis == Game.Level.ProjectionAxis.FlattenZ) ? projectionBuilder.GetPlaneZ() : projectionBuilder.GetPlaneX();
+            float planeConst = (axis == Game.Level.ProjectionAxis.FlattenZ) ? geometryProjector.GetPlaneZ() : geometryProjector.GetPlaneX();
             Game.Player.MovePlane newPlane = (axis == Game.Level.ProjectionAxis.FlattenZ) ? Game.Player.MovePlane.X : Game.Player.MovePlane.Z;
             playerAdapter?.SetPlayerPlane(newPlane, planeConst);
 
@@ -298,7 +298,7 @@ namespace Game.Projection
 
         private void RebuildForCurrentView()
         {
-            projectionBuilder.Rebuild(GetProjectionForCurrent());
+            geometryProjector.Rebuild(GetProjectionForCurrent());
         }
 
         private void RepositionPivotToCenter()
