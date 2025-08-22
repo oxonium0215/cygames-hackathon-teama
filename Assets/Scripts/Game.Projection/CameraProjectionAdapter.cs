@@ -21,6 +21,10 @@ namespace Game.Projection
             Vector3 center = rotationCenter ? rotationCenter.position : cameraPivot.position - pivotOffset;
             Vector3 target = center + pivotOffset;
             
+            // Preserve current Y position to avoid sudden camera jumps during perspective switching.
+            // Y movement should be handled by VerticalCameraFollow component.
+            target.y = cameraPivot.position.y;
+            
             cameraPivot.position = target;
         }
         
