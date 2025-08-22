@@ -30,7 +30,7 @@ namespace Game.Level
         [SerializeField] private float planeXOffset = 8.5f;
 
         [Header("Physics")]
-        [SerializeField] private bool disableSourceColliders = true;
+        [SerializeField] private bool disableTerrainColliders = true;
 
         // Core transformation system
         private GeometryTransformer _geometryTransformer;
@@ -61,11 +61,11 @@ namespace Game.Level
         }
 
         /// <summary>
-        /// Initialize the geometry projector. In the new system, sources remain active and visible.
+        /// Initialize the geometry projector. Terrain objects are transformed in-place.
         /// </summary>
         public void InitializeOnce()
         {
-            if (disableSourceColliders)
+            if (disableTerrainColliders)
             {
                 SetTerrainCollidersEnabled(false);
             }
@@ -88,14 +88,17 @@ namespace Game.Level
         }
 
         /// <summary>
-        /// Clear projection state and restore original positions.
+        /// Restore terrain to original positions and states.
         /// </summary>
-        public void ClearProjected()
+        public void RestoreTerrain()
         {
             if (_geometryTransformer == null)
                 _geometryTransformer = new GeometryTransformer();
             _geometryTransformer.Restore();
         }
+
+        /// <summary>Legacy compatibility - use RestoreTerrain instead</summary>
+        public void ClearProjected() => RestoreTerrain();
 
         /// <summary>
         /// Rebuild geometry projection for the specified axis using in-place transformation.

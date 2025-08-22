@@ -17,20 +17,18 @@ This implementation changes the projection behavior during viewpoint changes fro
 ### 2. Updated GeometryProjector Class
 - **File**: `Assets/Scripts/Game.Level/GeometryProjector.cs`
 - **Changes**:
-  - Uses `GeometryTransformer` instead of `ProjectorPass`
-  - `ProjectedRoot` now returns `SourceRoot` (backward compatibility)
-  - Updated visibility logic to keep sources active in new system
-  - Marked deprecated fields with appropriate tooltips
-  - Maintains same public interface for existing code
+  - Uses `GeometryTransformer` instead of deprecated cloning system
+  - `TerrainRoot` property manages terrain objects that are transformed in-place
+  - `ProjectedRoot` returns `TerrainRoot` for backward compatibility
+  - Updated visibility logic to reflect in-place transformation approach
+  - Maintains same public interface for existing code compatibility
 
-### 3. Debug/Demo Component
-- **File**: `Assets/Scripts/Game.Debugging/TerrainMovementDemo.cs`
-- **Purpose**: Demonstrates the new system and validates object preservation
-- **Features**:
-  - Runtime testing of projection switching
-  - Object count validation (should never change)
-  - On-screen GUI showing system status
-  - Keyboard controls for manual testing
+### 3. Clean Architecture
+The system has been refactored to use consistent naming that reflects the in-place transformation approach:
+- `TerrainRoot` instead of legacy "source" terminology
+- `geometryProjector` instead of the confusing "projectionBuilder"
+- Method names like `SetTerrainVisible()` that clearly indicate what they operate on
+- Comprehensive backward compatibility for smooth transitions
 
 ## Benefits of New System
 
@@ -45,8 +43,9 @@ This implementation changes the projection behavior during viewpoint changes fro
 - Faster perspective switching (just position updates)
 
 ### Simplified Architecture
-- Single source of truth for terrain geometry
-- No synchronization needed between source and projected versions
+- Single set of terrain objects that are transformed in-place
+- No synchronization needed between multiple versions
+- Cleaner, more intuitive naming conventions
 - Easier debugging and scene setup
 
 ## Backward Compatibility

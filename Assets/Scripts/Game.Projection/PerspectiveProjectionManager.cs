@@ -113,7 +113,7 @@ namespace Game.Projection
             projectionController.BeginSwitch(nextIndex, rotateDuration, rotateEase);
 
             // Clear previous projection state and reposition camera
-            geometryProjector.ClearProjected();
+            geometryProjector.RestoreTerrain();
             cameraAdapter.RepositionPivotToCenter(rotationCenter, pivotOffset);
 
             // If no player, rotate camera only
