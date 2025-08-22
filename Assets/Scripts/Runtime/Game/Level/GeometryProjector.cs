@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 using Game.Core;
 
@@ -38,11 +37,6 @@ namespace Game.Level
         private void Awake()
         {
             _geometryTransformer = new GeometryTransformer();
-        }
-
-        private void OnValidate()
-        {
-            // OnValidate is called in editor only - initialization is handled in Awake()
         }
 
         private void OnDestroy()
