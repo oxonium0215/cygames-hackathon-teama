@@ -274,12 +274,10 @@ namespace Game.Player
                     float scaleXZ = Mathf.Max(Mathf.Abs(transform.lossyScale.x), Mathf.Abs(transform.lossyScale.z));
                     suggested = Mathf.Clamp(cap.radius * scaleXZ * 0.6f, 0.04f, 0.5f);
                 }
-#if UNITY_6_0_OR_NEWER
                 else if (col is CharacterController cc)
                 {
                     suggested = Mathf.Clamp(cc.radius * 0.6f, 0.04f, 0.5f);
                 }
-#endif
                 else
                 {
                     float footprint = Mathf.Min(cachedBounds.extents.x, cachedBounds.extents.z);

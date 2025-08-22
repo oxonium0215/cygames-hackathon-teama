@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 using Game.Core;
 
@@ -40,12 +39,6 @@ namespace Game.Level
             _geometryTransformer = new GeometryTransformer();
         }
 
-        private void OnValidate()
-        {
-            if (_geometryTransformer == null)
-                _geometryTransformer = new GeometryTransformer();
-        }
-
         private void OnDestroy()
         {
             _geometryTransformer?.Restore();
@@ -57,8 +50,6 @@ namespace Game.Level
         /// </summary>
         public void ClearProjected()
         {
-            if (_geometryTransformer == null)
-                _geometryTransformer = new GeometryTransformer();
             _geometryTransformer.Restore();
         }
 
@@ -88,9 +79,6 @@ namespace Game.Level
                 planeZ = planeZ,
                 planeX = planeX
             };
-
-            if (_geometryTransformer == null)
-                _geometryTransformer = new GeometryTransformer();
             
             _geometryTransformer.Transform(axis, context);
         }
