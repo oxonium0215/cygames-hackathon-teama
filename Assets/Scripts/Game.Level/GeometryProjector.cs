@@ -32,9 +32,13 @@ namespace Game.Level
 
         [Header("Rendering/Physics")]
         [Tooltip("Clone materials from sources if a MeshRenderer exists (even if disabled). DEPRECATED in new system.")]
+#pragma warning disable 0414  // Field assigned but never used - kept for backward compatibility
         [SerializeField] private bool copyMaterials = true;
+#pragma warning restore 0414
         [Tooltip("Layer to assign to projected clones (e.g., Ground/Environment). DEPRECATED in new system.")]
+#pragma warning disable 0414  // Field assigned but never used - kept for backward compatibility  
         [SerializeField] private int projectedLayer = -1;
+#pragma warning restore 0414
         [Tooltip("Disable source colliders at runtime. In new system, sources remain active for physics.")]
         [SerializeField] private bool disableSourceColliders = true;
         [Tooltip("Hide source renderers during normal play. In new system, sources remain visible as active geometry.")]

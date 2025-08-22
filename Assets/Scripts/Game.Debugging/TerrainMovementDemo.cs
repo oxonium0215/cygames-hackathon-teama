@@ -67,8 +67,9 @@ namespace Game.Debugging
             if (!showDebugInfo || !geometryProjector?.SourceRoot) return;
 
             int currentCount = CountAllChildren(geometryProjector.SourceRoot);
+            string status = currentCount == childCountBefore ? "preserved" : "CHANGED";
             Debug.Log($"[TerrainMovementDemo] Terrain objects {context}: {currentCount} " +
-                      $"(was {childCountBefore}). Objects {'preserved' if currentCount == childCountBefore else 'CHANGED'}!");
+                      $"(was {childCountBefore}). Objects {status}!");
             
             // In the new system, object count should never change
             if (currentCount != childCountBefore)
