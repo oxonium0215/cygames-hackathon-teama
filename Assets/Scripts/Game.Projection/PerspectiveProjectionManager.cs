@@ -112,7 +112,7 @@ namespace Game.Projection
         {
             projectionController.BeginSwitch(nextIndex, rotateDuration, rotateEase);
 
-            projectionBuilder.SetSourcesVisible(true);
+            // Clear previous projection state and reposition camera
             projectionBuilder.ClearProjected();
             cameraAdapter.RepositionPivotToCenter(rotationCenter, pivotOffset);
 
@@ -122,7 +122,6 @@ namespace Game.Projection
                 yield return RotateCameraOnly(nextIndex);
                 viewIndex = nextIndex;
                 RebuildForCurrentView();
-                projectionBuilder.SetSourcesVisible(false);
                 projectionController.CompleteSwitch();
                 yield break;
             }
@@ -198,10 +197,9 @@ namespace Game.Projection
                 yield return null;
             }
 
-            // Switch view and rebuild
+            // Switch view and rebuild geometry in-place
             viewIndex = nextIndex;
             RebuildForCurrentView();
-            projectionBuilder.SetSourcesVisible(false);
 
             // Final mapped position on target plane
             {
@@ -276,7 +274,6 @@ namespace Game.Projection
             cameraPivot.eulerAngles = eul;
 
             RebuildForCurrentView();
-            projectionBuilder.SetSourcesVisible(false);
 
             if (!playerTransform) return;
             if (!player && playerTransform) player = playerTransform.GetComponent<PlayerMotor>();

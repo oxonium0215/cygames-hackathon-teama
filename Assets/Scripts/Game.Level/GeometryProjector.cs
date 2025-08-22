@@ -9,100 +9,98 @@ namespace Game.Level
         FlattenX  // Force x = planeX
     }
 
+    /// <summary>
+    /// Handles geometry projection for perspective switching using in-place transformation.
+    /// Transforms original terrain objects directly instead of creating clones.
+    /// This preserves object identity for checkpoints, warps, and other interactive elements.
+    /// </summary>
     [DisallowMultipleComponent]
     public class GeometryProjector : MonoBehaviour
     {
         [Header("Hierarchy")]
-        [SerializeField] private Transform sourceRoot;     // True 3D blocks live here
-        [SerializeField] private Transform projectedRoot;  // Clones generated here
+        [SerializeField] private Transform sourceRoot;
 
         [Header("Center/Planes")]
-        [Tooltip("If set, planes are derived from this center transform on each rebuild.")]
         [SerializeField] private Transform rotationCenter;
-        [Tooltip("World Z plane to flatten to when axis = FlattenZ (overridden by rotationCenter if assigned).")]
         [SerializeField] private float planeZ = 0f;
-        [Tooltip("World X plane to flatten to when axis = FlattenX (overridden by rotationCenter if assigned).")]
         [SerializeField] private float planeX = 0f;
 
         [Header("Offsets (relative to RotationCenter)")]
-        [Tooltip("Additive offset to center.z used when axis = FlattenZ.")]
         [SerializeField] private float planeZOffset = -8.5f;
-        [Tooltip("Additive offset to center.x used when axis = FlattenX.")]
         [SerializeField] private float planeXOffset = 8.5f;
 
-        [Header("Rendering/Physics")]
-        [Tooltip("Clone materials from sources if a MeshRenderer exists (even if disabled).")]
-        [SerializeField] private bool copyMaterials = true;
-        [Tooltip("Layer to assign to projected clones (e.g., Ground/Environment). -1 keeps source layer.")]
-        [SerializeField] private int projectedLayer = -1;
-        [Tooltip("Disable source colliders at runtime so only clones are used for physics.")]
+        [Header("Physics")]
         [SerializeField] private bool disableSourceColliders = true;
-        [Tooltip("Hide source renderers during normal play (they are shown during camera rotation).")]
-        [SerializeField] private bool hideSourcesWhenIdle = true;
 
-        private readonly List<Renderer> sourceRenderers = new();
-        private readonly List<Collider> sourceColliders = new();
-
-        // Pure utility (façade pattern)
-        private ProjectorPass _projectorPass;
+        // Core transformation system
+        private GeometryTransformer _geometryTransformer;
 
         public Transform SourceRoot => sourceRoot;
-        public Transform ProjectedRoot => projectedRoot;
+        /// <summary>Returns sourceRoot for compatibility - in new system, sources are the active geometry</summary>
+        public Transform ProjectedRoot => sourceRoot;
 
         private void Awake()
         {
-            CacheSourceLists();
-            _projectorPass = new ProjectorPass();
+            _geometryTransformer = new GeometryTransformer();
         }
 
         private void OnValidate()
         {
-            CacheSourceLists();
-            if (_projectorPass == null)
-                _projectorPass = new ProjectorPass();
+            if (_geometryTransformer == null)
+                _geometryTransformer = new GeometryTransformer();
         }
 
-        private void CacheSourceLists()
+        private void OnDestroy()
         {
-            sourceRenderers.Clear();
-            sourceColliders.Clear();
-
-            if (sourceRoot == null) return;
-
-            sourceRenderers.AddRange(sourceRoot.GetComponentsInChildren<Renderer>(true));
-            sourceColliders.AddRange(sourceRoot.GetComponentsInChildren<Collider>(true));
+            _geometryTransformer?.Restore();
+            _geometryTransformer?.Clear();
         }
 
+        /// <summary>
+        /// Initialize the geometry projector. In the new system, sources remain active and visible.
+        /// </summary>
         public void InitializeOnce()
         {
-            if (hideSourcesWhenIdle) SetSourcesVisible(false);
-            if (disableSourceColliders) SetSourceCollidersEnabled(false);
+            if (disableSourceColliders)
+            {
+                SetSourceCollidersEnabled(false);
+            }
         }
 
+        /// <summary>
+        /// Control source visibility. In the new system, sources are the active geometry.
+        /// </summary>
         public void SetSourcesVisible(bool visible)
         {
-            foreach (var r in sourceRenderers)
-                if (r) r.enabled = visible;
+            _geometryTransformer?.SetSourcesVisible(visible);
         }
 
+        /// <summary>
+        /// Enable/disable source colliders. In the new system, source colliders are the active physics geometry.
+        /// </summary>
         public void SetSourceCollidersEnabled(bool enabled)
         {
-            foreach (var c in sourceColliders)
-                if (c) c.enabled = enabled;
+            _geometryTransformer?.SetSourceCollidersEnabled(enabled);
         }
 
+        /// <summary>
+        /// Clear projection state and restore original positions.
+        /// </summary>
         public void ClearProjected()
         {
-            if (_projectorPass == null)
-                _projectorPass = new ProjectorPass();
-            _projectorPass.Clear(projectedRoot);
+            if (_geometryTransformer == null)
+                _geometryTransformer = new GeometryTransformer();
+            _geometryTransformer.Restore();
         }
 
+        /// <summary>
+        /// Rebuild geometry projection for the specified axis using in-place transformation.
+        /// </summary>
         public void Rebuild(ProjectionAxis axis)
         {
-            if (sourceRoot == null || projectedRoot == null)
+            if (sourceRoot == null)
             {
-                Debug.LogWarning("[GeometryProjector] SourceRoot or ProjectedRoot not set.");
+                Debug.LogWarning("[GeometryProjector] SourceRoot not set.");
                 return;
             }
 
@@ -113,25 +111,20 @@ namespace Game.Level
                 planeX = rotationCenter.position.x + planeXOffset;
             }
 
-            // Create context and delegate to ProjectorPass
-            var context = new ProjectorPassContext
+            var context = new TransformationContext
             {
                 sourceRoot = sourceRoot,
-                projectedRoot = projectedRoot,
                 planeZ = planeZ,
-                planeX = planeX,
-                copyMaterials = copyMaterials,
-                projectedLayer = projectedLayer
+                planeX = planeX
             };
 
-            if (_projectorPass == null)
-                _projectorPass = new ProjectorPass();
+            if (_geometryTransformer == null)
+                _geometryTransformer = new GeometryTransformer();
             
-            _projectorPass.Clear(projectedRoot);
-            _projectorPass.Run(axis, context);
+            _geometryTransformer.Transform(axis, context);
         }
 
-        // Plane accessors and center setter
+        // Plane accessors and center configuration
         public void SetPlaneZ(float value) => planeZ = value;
         public void SetPlaneX(float value) => planeX = value;
         public float GetPlaneZ() => planeZ;
@@ -139,7 +132,9 @@ namespace Game.Level
         public void SetRotationCenter(Transform t) => rotationCenter = t;
         public Transform GetRotationCenter() => rotationCenter;
 
-        // Offsets
+        /// <summary>
+        /// Set plane offsets relative to rotation center.
+        /// </summary>
         public void SetPlaneOffsets(float zOffset, float xOffset)
         {
             planeZOffset = zOffset;
