@@ -70,9 +70,7 @@ namespace Game.Projection
                 var p = transform.position;
                 p.y += requiredUp + penetrationSkin;
                 transform.position = p;
-#if UNITY_2021_2_OR_NEWER
                 Physics.SyncTransforms();
-#endif
                 movedAny = true;
                 movedTotal += requiredUp + penetrationSkin;
             }
@@ -103,9 +101,7 @@ namespace Game.Projection
                             var p = transform.position;
                             p.y += delta;
                             transform.position = p;
-#if UNITY_2021_2_OR_NEWER
                             Physics.SyncTransforms();
-#endif
                             movedAny = true;
                         }
                     }

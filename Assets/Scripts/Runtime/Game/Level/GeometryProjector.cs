@@ -42,8 +42,7 @@ namespace Game.Level
 
         private void OnValidate()
         {
-            if (_geometryTransformer == null)
-                _geometryTransformer = new GeometryTransformer();
+            // OnValidate is called in editor only - initialization is handled in Awake()
         }
 
         private void OnDestroy()
@@ -57,8 +56,6 @@ namespace Game.Level
         /// </summary>
         public void ClearProjected()
         {
-            if (_geometryTransformer == null)
-                _geometryTransformer = new GeometryTransformer();
             _geometryTransformer.Restore();
         }
 
@@ -88,9 +85,6 @@ namespace Game.Level
                 planeZ = planeZ,
                 planeX = planeX
             };
-
-            if (_geometryTransformer == null)
-                _geometryTransformer = new GeometryTransformer();
             
             _geometryTransformer.Transform(axis, context);
         }

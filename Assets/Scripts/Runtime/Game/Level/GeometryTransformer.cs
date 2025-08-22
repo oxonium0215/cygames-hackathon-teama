@@ -98,9 +98,7 @@ namespace Game.Level
                 }
             }
 
-#if UNITY_2021_2_OR_NEWER
             Physics.SyncTransforms();
-#endif
         }
     }
 }

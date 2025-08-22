@@ -321,9 +321,7 @@ namespace Game.Projection
                 Vector3 p = playerTransform.position;
                 p.y = hit.point.y + groundSkin;
                 playerTransform.position = p;
-#if UNITY_2021_2_OR_NEWER
                 Physics.SyncTransforms();
-#endif
                 return true;
             }
             return false;
