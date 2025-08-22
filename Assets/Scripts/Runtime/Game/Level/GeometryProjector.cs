@@ -69,7 +69,9 @@ namespace Game.Level
         {
             if (sourceRoot == null)
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogWarning($"{GameConstants.LOG_PREFIX_GEOMETRY} SourceRoot not set.");
+#endif
                 return;
             }
 

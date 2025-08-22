@@ -40,6 +40,10 @@ namespace Game.Player
 
         private Rigidbody rb;
         private Collider col;
+        
+        // Cached objects to reduce GC allocations in FixedUpdate/Update
+        private Vector3 tempVector3;
+        private Bounds cachedBounds;
 
         // Input/state
         private Vector2 moveInput;
@@ -182,15 +186,37 @@ namespace Game.Player
                 if (planeLockAxis == MovePlane.X)
                 {
                     if (!Mathf.Approximately(pos.z, planeLockValue))
-                        rb.position = new Vector3(pos.x, pos.y, planeLockValue);
+                    {
+                        tempVector3.x = pos.x;
+                        tempVector3.y = pos.y;
+                        tempVector3.z = planeLockValue;
+                        rb.position = tempVector3;
+                    }
                     if (Mathf.Abs(rb.linearVelocity.z) > 0f)
-                        rb.linearVelocity = new Vector3(rb.linearVelocity.x, rb.linearVelocity.y, 0f);
+                    {
+                        var vel = rb.linearVelocity;
+                        tempVector3.x = vel.x;
+                        tempVector3.y = vel.y;
+                        tempVector3.z = 0f;
+                        rb.linearVelocity = tempVector3;
+                    }
                 } else
                 {
                     if (!Mathf.Approximately(pos.x, planeLockValue))
-                        rb.position = new Vector3(planeLockValue, pos.y, pos.z);
+                    {
+                        tempVector3.x = planeLockValue;
+                        tempVector3.y = pos.y;
+                        tempVector3.z = pos.z;
+                        rb.position = tempVector3;
+                    }
                     if (Mathf.Abs(rb.linearVelocity.x) > 0f)
-                        rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, rb.linearVelocity.z);
+                    {
+                        var vel = rb.linearVelocity;
+                        tempVector3.x = 0f;
+                        tempVector3.y = vel.y;
+                        tempVector3.z = vel.z;
+                        rb.linearVelocity = tempVector3;
+                    }
                 }
             }
 
@@ -234,9 +260,11 @@ namespace Game.Player
         {
             if (!col || !groundCheck) return;
 
-            var b = col.bounds; // world AABB
-            Vector3 footWorld = new Vector3(b.center.x, b.min.y + groundCheckSkin, b.center.z);
-            groundCheck.position = footWorld;
+            cachedBounds = col.bounds; // world AABB - cache to avoid repeated property access
+            tempVector3.x = cachedBounds.center.x;
+            tempVector3.y = cachedBounds.min.y + groundCheckSkin;
+            tempVector3.z = cachedBounds.center.z;
+            groundCheck.position = tempVector3;
 
             if (autoSizeGroundCheck)
             {
@@ -254,7 +282,7 @@ namespace Game.Player
 #endif
                 else
                 {
-                    float footprint = Mathf.Min(b.extents.x, b.extents.z);
+                    float footprint = Mathf.Min(cachedBounds.extents.x, cachedBounds.extents.z);
                     suggested = Mathf.Clamp(footprint * 0.5f, 0.04f, 0.5f);
                 }
                 groundCheckRadius = suggested;
