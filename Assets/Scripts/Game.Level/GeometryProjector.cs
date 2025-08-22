@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Game.Core;
 
 namespace Game.Level
 {
@@ -11,8 +12,8 @@ namespace Game.Level
 
     /// <summary>
     /// Handles geometry projection for perspective switching using in-place transformation.
-    /// Transforms original terrain objects directly instead of creating clones.
-    /// This preserves object identity for checkpoints, warps, and other interactive elements.
+    /// Transforms original terrain objects directly, preserving object identity for 
+    /// checkpoints, warps, and other interactive elements.
     /// </summary>
     [DisallowMultipleComponent]
     public class GeometryProjector : MonoBehaviour
@@ -36,7 +37,7 @@ namespace Game.Level
         private GeometryTransformer _geometryTransformer;
 
         public Transform SourceRoot => sourceRoot;
-        /// <summary>Returns sourceRoot for compatibility - in new system, sources are the active geometry</summary>
+        /// <summary>Returns sourceRoot for backward compatibility.</summary>
         public Transform ProjectedRoot => sourceRoot;
 
         private void Awake()
@@ -57,7 +58,7 @@ namespace Game.Level
         }
 
         /// <summary>
-        /// Initialize the geometry projector. In the new system, sources remain active and visible.
+        /// Initialize the geometry projector.
         /// </summary>
         public void InitializeOnce()
         {
@@ -68,7 +69,7 @@ namespace Game.Level
         }
 
         /// <summary>
-        /// Control source visibility. In the new system, sources are the active geometry.
+        /// Control source visibility.
         /// </summary>
         public void SetSourcesVisible(bool visible)
         {
@@ -76,7 +77,7 @@ namespace Game.Level
         }
 
         /// <summary>
-        /// Enable/disable source colliders. In the new system, source colliders are the active physics geometry.
+        /// Enable/disable source colliders.
         /// </summary>
         public void SetSourceCollidersEnabled(bool enabled)
         {
@@ -100,7 +101,7 @@ namespace Game.Level
         {
             if (sourceRoot == null)
             {
-                Debug.LogWarning("[GeometryProjector] SourceRoot not set.");
+                Debug.LogWarning($"{GameConstants.LOG_PREFIX_GEOMETRY} SourceRoot not set.");
                 return;
             }
 

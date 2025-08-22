@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using Game.Core;
 using Game.Level;
 using Game.Player;
 
@@ -73,7 +74,7 @@ namespace Game.Projection
         {
             if (!projectionBuilder || !cameraPivot)
             {
-                Debug.LogError("[PerspectiveProjectionManager] Missing GeometryProjector or CameraPivot.");
+                Debug.LogError($"{GameConstants.LOG_PREFIX_PROJECTION} Missing GeometryProjector or CameraPivot.");
                 enabled = false;
                 return;
             }
