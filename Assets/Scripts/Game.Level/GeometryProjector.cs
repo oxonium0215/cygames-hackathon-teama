@@ -13,8 +13,8 @@ namespace Game.Level
     public class GeometryProjector : MonoBehaviour
     {
         [Header("Hierarchy")]
-        [SerializeField] private Transform sourceRoot;     // True 3D blocks live here
-        [SerializeField] private Transform projectedRoot;  // Clones generated here
+        [SerializeField] private Transform sourceRoot;     // True 3D blocks live here (now transformed in-place)
+        [SerializeField] private Transform projectedRoot;  // DEPRECATED: No longer used, kept for compatibility
 
         [Header("Center/Planes")]
         [Tooltip("If set, planes are derived from this center transform on each rebuild.")]
@@ -43,23 +43,30 @@ namespace Game.Level
         private readonly List<Renderer> sourceRenderers = new();
         private readonly List<Collider> sourceColliders = new();
 
-        // Pure utility (façade pattern)
-        private ProjectorPass _projectorPass;
+        // Use geometry transformer instead of projector pass
+        private GeometryTransformer _geometryTransformer;
 
         public Transform SourceRoot => sourceRoot;
-        public Transform ProjectedRoot => projectedRoot;
+        public Transform ProjectedRoot => sourceRoot; // Now same as sourceRoot since we transform in-place
 
         private void Awake()
         {
             CacheSourceLists();
-            _projectorPass = new ProjectorPass();
+            _geometryTransformer = new GeometryTransformer();
         }
 
         private void OnValidate()
         {
             CacheSourceLists();
-            if (_projectorPass == null)
-                _projectorPass = new ProjectorPass();
+            if (_geometryTransformer == null)
+                _geometryTransformer = new GeometryTransformer();
+        }
+
+        private void OnDestroy()
+        {
+            // Restore geometry to original positions before destruction
+            _geometryTransformer?.Restore();
+            _geometryTransformer?.Clear();
         }
 
         private void CacheSourceLists()
@@ -81,28 +88,45 @@ namespace Game.Level
 
         public void SetSourcesVisible(bool visible)
         {
-            foreach (var r in sourceRenderers)
-                if (r) r.enabled = visible;
+            if (_geometryTransformer != null)
+            {
+                _geometryTransformer.SetSourcesVisible(visible);
+            }
+            else
+            {
+                // Fallback to manual control
+                foreach (var r in sourceRenderers)
+                    if (r) r.enabled = visible;
+            }
         }
 
         public void SetSourceCollidersEnabled(bool enabled)
         {
-            foreach (var c in sourceColliders)
-                if (c) c.enabled = enabled;
+            if (_geometryTransformer != null)
+            {
+                _geometryTransformer.SetSourceCollidersEnabled(enabled);
+            }
+            else
+            {
+                // Fallback to manual control
+                foreach (var c in sourceColliders)
+                    if (c) c.enabled = enabled;
+            }
         }
 
         public void ClearProjected()
         {
-            if (_projectorPass == null)
-                _projectorPass = new ProjectorPass();
-            _projectorPass.Clear(projectedRoot);
+            // In the new system, this means restore original positions
+            if (_geometryTransformer == null)
+                _geometryTransformer = new GeometryTransformer();
+            _geometryTransformer.Restore();
         }
 
         public void Rebuild(ProjectionAxis axis)
         {
-            if (sourceRoot == null || projectedRoot == null)
+            if (sourceRoot == null)
             {
-                Debug.LogWarning("[GeometryProjector] SourceRoot or ProjectedRoot not set.");
+                Debug.LogWarning("[GeometryProjector] SourceRoot not set.");
                 return;
             }
 
@@ -113,22 +137,19 @@ namespace Game.Level
                 planeX = rotationCenter.position.x + planeXOffset;
             }
 
-            // Create context and delegate to ProjectorPass
-            var context = new ProjectorPassContext
+            // Create context and delegate to GeometryTransformer
+            var context = new TransformationContext
             {
                 sourceRoot = sourceRoot,
-                projectedRoot = projectedRoot,
                 planeZ = planeZ,
-                planeX = planeX,
-                copyMaterials = copyMaterials,
-                projectedLayer = projectedLayer
+                planeX = planeX
             };
 
-            if (_projectorPass == null)
-                _projectorPass = new ProjectorPass();
+            if (_geometryTransformer == null)
+                _geometryTransformer = new GeometryTransformer();
             
-            _projectorPass.Clear(projectedRoot);
-            _projectorPass.Run(axis, context);
+            // Transform geometry in-place instead of cloning
+            _geometryTransformer.Transform(axis, context);
         }
 
         // Plane accessors and center setter
