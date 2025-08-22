@@ -27,7 +27,7 @@ namespace Game.Camera
         [SerializeField, Min(0.01f)] private float smoothMaxSpeed = 30f;
 
         [Header("Behavior")]
-        [Tooltip("When enabled, prevents the camera from moving down (legacy mode). When disabled, allows full bidirectional following.")]
+        [Tooltip("When enabled, prevents the camera from moving down. When disabled, allows full bidirectional following.")]
         [SerializeField] private bool neverScrollDown = false;
 
         float _velY; // for SmoothDamp
@@ -48,7 +48,7 @@ namespace Game.Camera
             float pivotY = transform.position.y;
             float playerY = followTarget.position.y;
             
-            // Compute threshold: pivotY + topDeadZone (inlined from TopDeadZonePolicy)
+            // Compute threshold: pivotY + topDeadZone
             float thresholdY = pivotY + topDeadZone;
 
             // Determine if we should follow the player
@@ -60,7 +60,7 @@ namespace Game.Camera
                 float desiredY;
                 if (shouldFollowUp)
                 {
-                    // Follow upward with dead zone offset: playerY - topDeadZone (inlined from TopDeadZonePolicy)
+                    // Follow upward with dead zone offset: playerY - topDeadZone
                     desiredY = playerY - topDeadZone;
                 }
                 else
@@ -77,12 +77,12 @@ namespace Game.Camera
                 } 
                 else
                 {
-                    // Constant speed smoothing: inlined from ConstantSpeedSmoothing
+                    // Constant speed smoothing
                     float step = upSpeed * Time.deltaTime;
                     newY = Mathf.MoveTowards(pivotY, desiredY, step);
                 }
 
-                // Enforce upward-only constraint if in legacy mode
+                // Enforce upward-only constraint if neverScrollDown is true
                 if (neverScrollDown && newY < pivotY)
                     newY = pivotY;
 

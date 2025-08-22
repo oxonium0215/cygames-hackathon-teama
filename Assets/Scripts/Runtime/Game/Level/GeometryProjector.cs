@@ -27,8 +27,8 @@ namespace Game.Level
         [SerializeField] private float planeX = 0f;
 
         [Header("Offsets (relative to RotationCenter)")]
-        [SerializeField] private float planeZOffset = -8.5f;
-        [SerializeField] private float planeXOffset = 8.5f;
+        [SerializeField] private float planeZOffset = -8f;
+        [SerializeField] private float planeXOffset = 8f;
 
         [Header("Physics")]
         [SerializeField] private bool disableSourceColliders = true;

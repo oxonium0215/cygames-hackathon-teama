@@ -15,7 +15,7 @@ namespace Game.Camera
             // Get current pivot position
             Vector3 pivotPosition = transform.position;
             
-            // Compute the threshold Y: pivotPosition.y + topDeadZone (inlined from TopDeadZonePolicy)
+            // Compute the threshold Y: pivotPosition.y + topDeadZone
             float thresholdY = pivotPosition.y + topDeadZone;
             
             // Set gizmo color to cyan for dead zone visualization
