@@ -1,8 +1,9 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Game.Player;
 using Game.Projection;
 
-namespace Game.Player
+namespace Game.Input
 {
     // Routes UnityEvents from PlayerInput to gameplay components
     public class PlayerInputRelay : MonoBehaviour
@@ -22,14 +23,12 @@ namespace Game.Player
 
         private void Update()
         {
-            // Clear transient flags once per frame
             playerInput?.ClearTransient();
             
             // Check if input suppression has ended and forward any held input
             bool currentlySuppress = perspective != null && perspective.IsSwitching && perspective.JumpOnlyDuringSwitch;
             if (wasInputSuppressed && !currentlySuppress && playerInput != null)
             {
-                // Suppression just ended, forward any currently held input
                 motor?.SetMove(playerInput.Move);
             }
             wasInputSuppressed = currentlySuppress;

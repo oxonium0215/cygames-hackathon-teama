@@ -1,7 +1,11 @@
 {
-    "name": "Game.Player",
-    "rootNamespace": "Game.Player",
-    "references": [],
+    "name": "Game.Input",
+    "rootNamespace": "Game.Input",
+    "references": [
+        "Game.Player",
+        "Game.Projection",
+        "Unity.InputSystem"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

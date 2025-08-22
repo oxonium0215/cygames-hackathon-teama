@@ -3,6 +3,7 @@
     "rootNamespace": "Game.Debugging",
     "references": [
         "Unity.InputSystem",
+        "Game.Input",
         "Game.Player",
         "Game.Projection"
     ],
