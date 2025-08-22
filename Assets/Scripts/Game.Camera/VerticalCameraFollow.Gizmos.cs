@@ -12,14 +12,11 @@ namespace Game.Camera
         /// </summary>
         private void OnDrawGizmosSelected()
         {
-            // Only draw in editor and when we have valid policies
-            if (_deadZonePolicy == null) return;
-
             // Get current pivot position
             Vector3 pivotPosition = transform.position;
             
-            // Compute the threshold Y using the dead zone policy
-            float thresholdY = _deadZonePolicy.ComputeThreshold(pivotPosition.y);
+            // Compute the threshold Y: pivotPosition.y + topDeadZone (inlined from TopDeadZonePolicy)
+            float thresholdY = pivotPosition.y + topDeadZone;
             
             // Set gizmo color to cyan for dead zone visualization
             Gizmos.color = Color.cyan;
