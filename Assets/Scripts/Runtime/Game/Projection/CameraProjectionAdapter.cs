@@ -8,6 +8,7 @@ namespace Game.Projection
     public class CameraProjectionAdapter
     {
         private readonly Transform cameraPivot;
+        private Vector3 tempVector3; // Cached vector to reduce GC allocations
         
         public CameraProjectionAdapter(Transform cameraPivot)
         {
@@ -45,7 +46,10 @@ namespace Game.Projection
             if (!cameraPivot || cameraPivot.childCount == 0) return;
             
             var cam = cameraPivot.GetChild(0);
-            cam.localPosition = new Vector3(0f, 0f, -Mathf.Abs(distance));
+            tempVector3.x = 0f;
+            tempVector3.y = 0f;
+            tempVector3.z = -Mathf.Abs(distance);
+            cam.localPosition = tempVector3;
             cam.localRotation = Quaternion.identity;
         }
     }

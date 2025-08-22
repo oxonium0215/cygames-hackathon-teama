@@ -74,7 +74,9 @@ namespace Game.Projection
         {
             if (!projectionBuilder || !cameraPivot)
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogError($"{GameConstants.LOG_PREFIX_PROJECTION} Missing GeometryProjector or CameraPivot.");
+#endif
                 enabled = false;
                 return;
             }
