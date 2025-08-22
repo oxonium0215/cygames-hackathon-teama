@@ -27,10 +27,9 @@ namespace Game.Camera
         [SerializeField, Min(0.01f)] private float smoothMaxSpeed = 30f;
 
         [Header("Behavior")]
-        [Tooltip("Prevents the camera from ever moving down once it has moved up.")]
+        [Tooltip("When enabled, prevents the camera from moving down (legacy mode). When disabled, allows full bidirectional following.")]
         [SerializeField] private bool neverScrollDown = false;
 
-        float _maxPivotY;
         float _velY; // for SmoothDamp
 
         // Pure utilities (façade pattern)
@@ -46,8 +45,6 @@ namespace Game.Camera
 
         void Awake()
         {
-            _maxPivotY = transform.position.y;
-            
             // Initialize pure utilities
             EnsurePoliciesUpToDate();
         }
@@ -97,26 +94,18 @@ namespace Game.Camera
             // Ensure policies are up to date (only recreates if parameters changed)
             EnsurePoliciesUpToDate();
 
-            // Handle legacy neverScrollDown behavior for backward compatibility
-            var pos = transform.position;
-            if (neverScrollDown && pos.y < _maxPivotY)
-            {
-                pos.y = _maxPivotY;
-                transform.position = pos;
-                return; // Skip normal following logic when using legacy mode
-            }
-
             float pivotY = transform.position.y;
             float playerY = followTarget.position.y;
             float thresholdY = _deadZonePolicy.ComputeThreshold(pivotY);
 
-            // Check if we should follow (upward with dead zone, or any downward movement)
-            bool shouldFollow = (playerY > thresholdY) || (!neverScrollDown && playerY < pivotY);
-
-            if (shouldFollow)
+            // Determine if we should follow the player
+            bool shouldFollowUp = playerY > thresholdY;
+            bool shouldFollowDown = !neverScrollDown && playerY < pivotY;
+            
+            if (shouldFollowUp || shouldFollowDown)
             {
                 float desiredY;
-                if (playerY > thresholdY)
+                if (shouldFollowUp)
                 {
                     // Follow upward with dead zone offset
                     desiredY = _deadZonePolicy.ComputeDesiredY(playerY);
@@ -127,39 +116,25 @@ namespace Game.Camera
                     desiredY = playerY;
                 }
 
+                // Apply smoothing
                 float newY;
                 if (useSmoothDamp)
                 {
                     newY = Mathf.SmoothDamp(pivotY, desiredY, ref _velY, smoothTime, smoothMaxSpeed, Time.deltaTime);
-                    // SmoothDamp may overshoot downwards if desired decreases
-                    if (neverScrollDown) newY = Mathf.Max(newY, pivotY);
                 } else
                 {
                     newY = _constantSpeedSmoothing.ComputeNewY(pivotY, desiredY, Time.deltaTime);
                 }
 
-                // Enforce upward-only rule for legacy mode
-                if (neverScrollDown) newY = Mathf.Max(newY, pivotY);
+                // Enforce upward-only constraint if in legacy mode
+                if (neverScrollDown && newY < pivotY)
+                    newY = pivotY;
 
+                // Apply the new position
+                var pos = transform.position;
                 pos.y = newY;
                 transform.position = pos;
-
-                // Update the max pivot Y reached (legacy behavior)
-                if (neverScrollDown && newY > _maxPivotY)
-                    _maxPivotY = newY;
             }
-        }
-
-        // If some system needs to override the current 'highest Y' (e.g. when loading a checkpoint),
-        // call this to set a new floor for the camera Y
-        public void SetFloorToCurrentY()
-        {
-            _maxPivotY = Mathf.Max(_maxPivotY, transform.position.y);
-        }
-
-        public void SetFloor(float y)
-        {
-            _maxPivotY = Mathf.Max(_maxPivotY, y);
         }
     }
 }
