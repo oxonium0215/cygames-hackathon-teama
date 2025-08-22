@@ -36,6 +36,9 @@ namespace Game.Camera
 
         float _maxPivotY;
         float _velY; // for SmoothDamp
+        
+        // Suspension mechanism for external systems (e.g., during perspective switching)
+        private bool _isSuspended = false;
 
         // Pure utilities (façade pattern)
         private TopDeadZonePolicy _deadZonePolicy;
@@ -117,6 +120,9 @@ namespace Game.Camera
         void LateUpdate()
         {
             if (!followTarget) return;
+            
+            // Skip following when suspended by external systems (e.g., during perspective switching)
+            if (_isSuspended) return;
 
             // Ensure policies are up to date (only recreates if parameters changed)
             EnsurePoliciesUpToDate();
@@ -224,6 +230,31 @@ namespace Game.Camera
         public bool GetNeverScrollDown()
         {
             return neverScrollDown;
+        }
+
+        /// <summary>
+        /// Suspends camera following to allow external systems to control camera positioning.
+        /// Used during perspective switching to prevent conflicts.
+        /// </summary>
+        public void SuspendFollowing()
+        {
+            _isSuspended = true;
+        }
+
+        /// <summary>
+        /// Resumes camera following after external control is finished.
+        /// </summary>
+        public void ResumeFollowing()
+        {
+            _isSuspended = false;
+        }
+
+        /// <summary>
+        /// Returns true if camera following is currently suspended.
+        /// </summary>
+        public bool IsSuspended()
+        {
+            return _isSuspended;
         }
     }
 }

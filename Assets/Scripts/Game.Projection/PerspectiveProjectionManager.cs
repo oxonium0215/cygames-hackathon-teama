@@ -113,6 +113,9 @@ namespace Game.Projection
         {
             projectionController.BeginSwitch(nextIndex, rotateDuration, rotateEase);
 
+            // Suspend VerticalCameraFollow to prevent conflicts during perspective switch
+            cameraAdapter.SuspendVerticalFollow();
+
             // Clear previous projection state and reposition camera
             projectionBuilder.ClearProjected();
             cameraAdapter.RepositionPivotToCenter(rotationCenter, pivotOffset);
@@ -123,6 +126,10 @@ namespace Game.Projection
                 yield return RotateCameraOnly(nextIndex);
                 viewIndex = nextIndex;
                 RebuildForCurrentView();
+                
+                // Resume VerticalCameraFollow
+                cameraAdapter.ResumeVerticalFollow();
+                
                 projectionController.CompleteSwitch();
                 yield break;
             }
@@ -238,6 +245,9 @@ namespace Game.Projection
                 playerRb.linearVelocity = vFinal;
             }
 
+            // Resume VerticalCameraFollow now that perspective switch is complete
+            cameraAdapter.ResumeVerticalFollow();
+
             projectionController.CompleteSwitch();
         }
 
@@ -268,6 +278,9 @@ namespace Game.Projection
 
         private void ApplyViewImmediate(int idx)
         {
+            // Temporarily suspend VerticalCameraFollow during immediate view application
+            cameraAdapter?.SuspendVerticalFollow();
+            
             cameraAdapter?.RepositionPivotToCenter(rotationCenter, pivotOffset);
 
             var eul = cameraPivot.eulerAngles;
@@ -293,6 +306,9 @@ namespace Game.Projection
             SnapPlayerToGround();
             depenetrationSolver?.ResolveVerticalOverlapUpwards(playerCollider, playerTransform, 
                 groundMask, penetrationResolveIterations, true);
+            
+            // Resume VerticalCameraFollow after immediate view application is complete
+            cameraAdapter?.ResumeVerticalFollow();
         }
 
         private Game.Level.ProjectionAxis GetProjectionForCurrent() => (viewIndex == 0) ? viewAProjection : viewBProjection;

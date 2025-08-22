@@ -5,14 +5,21 @@ namespace Game.Projection
 {
     /// <summary>
     /// Handles camera pivot adjustments during projection switches.
+    /// Now coordinates with VerticalCameraFollow to prevent conflicts.
     /// </summary>
     public class CameraProjectionAdapter
     {
         private readonly Transform cameraPivot;
+        private VerticalCameraFollow verticalFollow;
         
         public CameraProjectionAdapter(Transform cameraPivot)
         {
             this.cameraPivot = cameraPivot;
+            // Cache the VerticalCameraFollow component for coordination
+            if (cameraPivot)
+            {
+                verticalFollow = cameraPivot.GetComponent<VerticalCameraFollow>();
+            }
         }
         
         public void RepositionPivotToCenter(Transform rotationCenter, Vector3 pivotOffset)
@@ -23,13 +30,26 @@ namespace Game.Projection
             Vector3 target = center + pivotOffset;
             
             // Check if VerticalCameraFollow is configured to prevent downward scrolling
-            var verticalFollow = cameraPivot.GetComponent<VerticalCameraFollow>();
             bool shouldPreventDownward = verticalFollow != null && verticalFollow.GetNeverScrollDown();
             
             // Preserve current (higher) Y if VerticalCameraFollow prevents downward scrolling
             if (shouldPreventDownward)
             {
                 target.y = Mathf.Max(target.y, cameraPivot.position.y);
+            }
+            else if (verticalFollow != null)
+            {
+                // When VerticalCameraFollow allows downward movement, be more conservative
+                // Only make small adjustments to avoid conflicts with the follow system
+                float currentY = cameraPivot.position.y;
+                float deltaY = target.y - currentY;
+                
+                // Limit large sudden Y changes to prevent jerking
+                const float maxSuddenChange = 2.0f; // Max units to change Y in one frame
+                if (Mathf.Abs(deltaY) > maxSuddenChange)
+                {
+                    target.y = currentY + Mathf.Sign(deltaY) * maxSuddenChange;
+                }
             }
             
             cameraPivot.position = target;
@@ -54,6 +74,28 @@ namespace Game.Projection
             var cam = cameraPivot.GetChild(0);
             cam.localPosition = new Vector3(0f, 0f, -Mathf.Abs(distance));
             cam.localRotation = Quaternion.identity;
+        }
+
+        /// <summary>
+        /// Suspends VerticalCameraFollow during projection switches to prevent conflicts.
+        /// </summary>
+        public void SuspendVerticalFollow()
+        {
+            if (verticalFollow != null)
+            {
+                verticalFollow.SuspendFollowing();
+            }
+        }
+
+        /// <summary>
+        /// Resumes VerticalCameraFollow after projection switches are complete.
+        /// </summary>
+        public void ResumeVerticalFollow()
+        {
+            if (verticalFollow != null)
+            {
+                verticalFollow.ResumeFollowing();
+            }
         }
     }
 }
