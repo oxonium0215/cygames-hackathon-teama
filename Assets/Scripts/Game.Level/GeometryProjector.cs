@@ -13,36 +13,25 @@ namespace Game.Level
     public class GeometryProjector : MonoBehaviour
     {
         [Header("Hierarchy")]
-        [SerializeField] private Transform sourceRoot;     // True 3D blocks live here (now transformed in-place)
-        [SerializeField] private Transform projectedRoot;  // DEPRECATED: No longer used, kept for compatibility
+        [SerializeField] private Transform sourceRoot;
+        [SerializeField] private Transform projectedRoot;  // DEPRECATED: kept for compatibility
 
         [Header("Center/Planes")]
-        [Tooltip("If set, planes are derived from this center transform on each rebuild.")]
         [SerializeField] private Transform rotationCenter;
-        [Tooltip("World Z plane to flatten to when axis = FlattenZ (overridden by rotationCenter if assigned).")]
         [SerializeField] private float planeZ = 0f;
-        [Tooltip("World X plane to flatten to when axis = FlattenX (overridden by rotationCenter if assigned).")]
         [SerializeField] private float planeX = 0f;
 
         [Header("Offsets (relative to RotationCenter)")]
-        [Tooltip("Additive offset to center.z used when axis = FlattenZ.")]
         [SerializeField] private float planeZOffset = -8.5f;
-        [Tooltip("Additive offset to center.x used when axis = FlattenX.")]
         [SerializeField] private float planeXOffset = 8.5f;
 
         [Header("Rendering/Physics")]
-        [Tooltip("Clone materials from sources if a MeshRenderer exists (even if disabled). DEPRECATED in new system.")]
-#pragma warning disable 0414  // Field assigned but never used - kept for backward compatibility
-        [SerializeField] private bool copyMaterials = true;
+#pragma warning disable 0414
+        [SerializeField] private bool copyMaterials = true;        // DEPRECATED
+        [SerializeField] private int projectedLayer = -1;         // DEPRECATED  
 #pragma warning restore 0414
-        [Tooltip("Layer to assign to projected clones (e.g., Ground/Environment). DEPRECATED in new system.")]
-#pragma warning disable 0414  // Field assigned but never used - kept for backward compatibility  
-        [SerializeField] private int projectedLayer = -1;
-#pragma warning restore 0414
-        [Tooltip("Disable source colliders at runtime. In new system, sources remain active for physics.")]
         [SerializeField] private bool disableSourceColliders = true;
-        [Tooltip("Hide source renderers during normal play. In new system, sources remain visible as active geometry.")]
-        [SerializeField] private bool hideSourcesWhenIdle = true;
+        [SerializeField] private bool hideSourcesWhenIdle = true; // DEPRECATED in new system
 
         private readonly List<Renderer> sourceRenderers = new();
         private readonly List<Collider> sourceColliders = new();
@@ -51,7 +40,7 @@ namespace Game.Level
         private GeometryTransformer _geometryTransformer;
 
         public Transform SourceRoot => sourceRoot;
-        public Transform ProjectedRoot => sourceRoot; // Now same as sourceRoot since we transform in-place
+        public Transform ProjectedRoot => sourceRoot; // Same as sourceRoot since we transform in-place
 
         private void Awake()
         {
@@ -68,7 +57,6 @@ namespace Game.Level
 
         private void OnDestroy()
         {
-            // Restore geometry to original positions before destruction
             _geometryTransformer?.Restore();
             _geometryTransformer?.Clear();
         }
@@ -86,9 +74,8 @@ namespace Game.Level
 
         public void InitializeOnce()
         {
-            // In the new system, sources should generally be enabled for collision and rendering
-            // since they are the active geometry. Keep existing interface for compatibility.
-            if (hideSourcesWhenIdle) SetSourcesVisible(false);
+            // In the new system, sources are the active geometry and should remain visible and collidable
+            // Only disable if explicitly configured to do so
             if (disableSourceColliders) SetSourceCollidersEnabled(false);
         }
 
@@ -96,15 +83,11 @@ namespace Game.Level
         {
             if (_geometryTransformer != null)
             {
-                // In the new system, we generally keep sources visible since they are the active geometry
-                // We only honor 'visible=false' requests during special cases (like destruction)
-                // or if hideSourcesWhenIdle is explicitly disabled
-                bool shouldBeVisible = visible || (!hideSourcesWhenIdle);
-                _geometryTransformer.SetSourcesVisible(shouldBeVisible);
+                // In the new system, sources are the active geometry and should generally stay visible
+                _geometryTransformer.SetSourcesVisible(visible);
             }
             else
             {
-                // Fallback to manual control for backward compatibility
                 foreach (var r in sourceRenderers)
                     if (r) r.enabled = visible;
             }
@@ -114,14 +97,11 @@ namespace Game.Level
         {
             if (_geometryTransformer != null)
             {
-                // In the new system, source colliders should generally remain enabled 
-                // since they are the active physics geometry
-                bool shouldBeEnabled = enabled || (!disableSourceColliders);
-                _geometryTransformer.SetSourceCollidersEnabled(shouldBeEnabled);
+                // In the new system, source colliders are the active physics geometry
+                _geometryTransformer.SetSourceCollidersEnabled(enabled);
             }
             else
             {
-                // Fallback to manual control for backward compatibility
                 foreach (var c in sourceColliders)
                     if (c) c.enabled = enabled;
             }
@@ -129,7 +109,6 @@ namespace Game.Level
 
         public void ClearProjected()
         {
-            // In the new system, this means restore original positions
             if (_geometryTransformer == null)
                 _geometryTransformer = new GeometryTransformer();
             _geometryTransformer.Restore();
@@ -150,7 +129,6 @@ namespace Game.Level
                 planeX = rotationCenter.position.x + planeXOffset;
             }
 
-            // Create context and delegate to GeometryTransformer
             var context = new TransformationContext
             {
                 sourceRoot = sourceRoot,
@@ -161,7 +139,6 @@ namespace Game.Level
             if (_geometryTransformer == null)
                 _geometryTransformer = new GeometryTransformer();
             
-            // Transform geometry in-place instead of cloning
             _geometryTransformer.Transform(axis, context);
         }
 

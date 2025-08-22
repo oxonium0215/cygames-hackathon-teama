@@ -71,7 +71,6 @@ namespace Game.Debugging
             Debug.Log($"[TerrainMovementDemo] Terrain objects {context}: {currentCount} " +
                       $"(was {childCountBefore}). Objects {status}!");
             
-            // In the new system, object count should never change
             if (currentCount != childCountBefore)
             {
                 Debug.LogWarning("[TerrainMovementDemo] Object count changed! This suggests the old duplication system might still be active.");
@@ -111,7 +110,7 @@ namespace Game.Debugging
                 
                 if (currentCount == childCountBefore)
                 {
-                    GUILayout.Label("✓ Objects preserved (no duplication)");
+                    GUILayout.Label("✓ Objects preserved");
                 }
                 else
                 {
