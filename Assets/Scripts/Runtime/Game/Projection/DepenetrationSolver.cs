@@ -85,8 +85,10 @@ namespace Game.Projection
                     float highestTop = float.NegativeInfinity;
                     Bounds myB = collider.bounds;
                     
-                    foreach (var other in overlaps)
+                    // Use for loop instead of foreach to avoid enumerator allocation
+                    for (int i = 0; i < overlaps.Length; i++)
                     {
+                        var other = overlaps[i];
                         if (!other || other == collider) continue;
                         highestTop = Mathf.Max(highestTop, other.bounds.max.y);
                     }

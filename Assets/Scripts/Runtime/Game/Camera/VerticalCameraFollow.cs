@@ -31,6 +31,7 @@ namespace Game.Camera
         [SerializeField] private bool neverScrollDown = false;
 
         float _velY; // for SmoothDamp
+        Vector3 _cachedPosition; // Cached to reduce property access in LateUpdate
 
         void OnValidate()
         {
@@ -45,7 +46,8 @@ namespace Game.Camera
         {
             if (!followTarget) return;
 
-            float pivotY = transform.position.y;
+            _cachedPosition = transform.position;
+            float pivotY = _cachedPosition.y;
             float playerY = followTarget.position.y;
             
             // Compute threshold: pivotY + topDeadZone
@@ -86,10 +88,9 @@ namespace Game.Camera
                 if (neverScrollDown && newY < pivotY)
                     newY = pivotY;
 
-                // Apply the new position
-                var pos = transform.position;
-                pos.y = newY;
-                transform.position = pos;
+                // Apply the new position using cached position to reduce property access
+                _cachedPosition.y = newY;
+                transform.position = _cachedPosition;
             }
         }
     }
