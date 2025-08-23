@@ -21,6 +21,7 @@ namespace Game.Preview
         [SerializeField] private PlayerMotor playerMotor;
         [SerializeField] private Rigidbody playerRigidbody;
         [SerializeField] private PerspectiveProjectionManager perspectiveProjectionManager;
+        [SerializeField] private Transform levelTransform;
 
         [Header("Preview Overlays")]
         [SerializeField] private Material previewMaterial;
@@ -52,6 +53,7 @@ namespace Game.Preview
             if (!playerMotor && player) playerMotor = player.GetComponent<PlayerMotor>();
             if (!playerRigidbody && player) playerRigidbody = player.GetComponent<Rigidbody>();
             if (!perspectiveProjectionManager) perspectiveProjectionManager = FindFirstObjectByType<PerspectiveProjectionManager>();
+            if (!levelTransform) levelTransform = GameObject.Find("Level")?.transform;
         }
 
         private void OnDestroy()
@@ -69,7 +71,8 @@ namespace Game.Preview
             if (isPreviewActive || isTransitioning) return;
             if (!ValidateComponents()) return;
             
-            if (perspectiveProjectionManager && perspectiveProjectionManager.IsSwitching) return;
+            // Block if perspective projection is switching OR if we are in preview mode
+            if (perspectiveProjectionManager && (perspectiveProjectionManager.IsSwitching || isPreviewActive)) return;
 
             SaveCurrentState();
             
@@ -86,6 +89,7 @@ namespace Game.Preview
             if (!isPreviewActive || isTransitioning) return;
             if (!ValidateComponents()) return;
             
+            // Block if perspective projection is switching
             if (perspectiveProjectionManager && perspectiveProjectionManager.IsSwitching) return;
 
             if (transitionCoroutine != null)
@@ -253,7 +257,9 @@ namespace Game.Preview
             }
 
             previewObject = new GameObject(name);
-            previewObject.transform.SetParent(transform);
+            // Parent to Level instead of this StagePreviewManager
+            Transform parentTransform = levelTransform ? levelTransform : transform;
+            previewObject.transform.SetParent(parentTransform);
 
             Transform sourceRoot = geometryProjector.SourceRoot;
             if (sourceRoot)
@@ -273,6 +279,9 @@ namespace Game.Preview
         private void CloneObjectForPreviewRecursive(Transform original, Transform parent, ProjectionAxis axis, int currentDepth, int maxDepth)
         {
             if (currentDepth >= maxDepth) return;
+            
+            // Skip if original is already a preview object to prevent recursive preview generation
+            if (original.name.Contains("Preview")) return;
 
             GameObject clone = new GameObject(original.name + "_Preview");
             clone.transform.SetParent(parent);
@@ -307,6 +316,8 @@ namespace Game.Preview
             foreach (Transform child in original)
             {
                 if (child == null) continue;
+                // Skip if child is already a preview object to prevent recursive preview generation
+                if (child.name.Contains("Preview")) continue;
                 CloneObjectForPreviewRecursive(child, clone.transform, axis, currentDepth + 1, maxDepth);
             }
         }
@@ -363,14 +374,20 @@ namespace Game.Preview
                 playerXYPreview = null;
             }
 
-            GameObject[] allObjects = FindObjectsOfType<GameObject>(true);
-            foreach (GameObject obj in allObjects)
+            // Check both under Level and under this transform for cleanup
+            Transform[] searchTransforms = { levelTransform, transform };
+            
+            foreach (Transform searchTransform in searchTransforms)
             {
-                if (obj != null && obj.name.Contains("Player_Preview"))
+                if (searchTransform == null) continue;
+                
+                // Use GetComponentsInChildren to find all preview objects in hierarchy
+                Transform[] allChildren = searchTransform.GetComponentsInChildren<Transform>(true);
+                foreach (Transform child in allChildren)
                 {
-                    if (obj.transform.parent == transform || obj.transform.IsChildOf(transform))
+                    if (child != null && child.name.Contains("Player_Preview"))
                     {
-                        DestroyImmediate(obj);
+                        DestroyImmediate(child.gameObject);
                     }
                 }
             }
@@ -381,7 +398,9 @@ namespace Game.Preview
             if (!player) return null;
 
             GameObject previewObj = new GameObject(name);
-            previewObj.transform.SetParent(transform);
+            // Parent to Level instead of this StagePreviewManager
+            Transform parentTransform = levelTransform ? levelTransform : transform;
+            previewObj.transform.SetParent(parentTransform);
             
             CopyPlayerVisualComponents(player.gameObject, previewObj);
             
@@ -405,6 +424,9 @@ namespace Game.Preview
         private void CopyPlayerVisualComponentsRecursive(GameObject source, GameObject target, int currentDepth, int maxDepth)
         {
             if (currentDepth >= maxDepth) return;
+            
+            // Skip if source is already a preview object to prevent recursive preview generation
+            if (source.name.Contains("Preview")) return;
 
             MeshRenderer sourceMeshRenderer = source.GetComponent<MeshRenderer>();
             MeshFilter sourceMeshFilter = source.GetComponent<MeshFilter>();
@@ -421,6 +443,9 @@ namespace Game.Preview
             foreach (Transform child in source.transform)
             {
                 if (child == null) continue;
+                
+                // Skip if child is already a preview object to prevent recursive preview generation
+                if (child.name.Contains("Preview")) continue;
 
                 MeshRenderer childRenderer = child.GetComponent<MeshRenderer>();
                 MeshFilter childFilter = child.GetComponent<MeshFilter>();

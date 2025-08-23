@@ -3,6 +3,7 @@ using UnityEngine;
 using Game.Core;
 using Game.Level;
 using Game.Player;
+using Game.Preview;
 
 namespace Game.Projection
 {
@@ -15,6 +16,7 @@ namespace Game.Projection
         [SerializeField] private PlayerMotor player;
         [SerializeField] private Transform playerTransform;
         [SerializeField] private Collider playerCollider; // used to resolve overlaps
+        [SerializeField] private StagePreviewManager stagePreviewManager;
 
         [Header("Camera")]
         [SerializeField] private float cameraDistance = 15f;
@@ -91,6 +93,9 @@ namespace Game.Projection
             if (rotationCenter) projectionBuilder.SetRotationCenter(rotationCenter);
 
             if (playerTransform) playerRb = playerTransform.GetComponent<Rigidbody>();
+            
+            // Auto-discover StagePreviewManager if not assigned
+            if (!stagePreviewManager) stagePreviewManager = FindFirstObjectByType<StagePreviewManager>();
 
             // Initialize services
             projectionController = new ProjectionController();
@@ -106,6 +111,10 @@ namespace Game.Projection
 
         public void TogglePerspective()
         {
+            // Block perspective switching if preview is active or transitioning
+            if (stagePreviewManager && (stagePreviewManager.IsPreviewActive || stagePreviewManager.IsTransitioning))
+                return;
+                
             if (projectionController?.IsRotating != true)
                 StartCoroutine(SwitchRoutine(1 - viewIndex));
         }
