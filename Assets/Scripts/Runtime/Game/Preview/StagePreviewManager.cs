@@ -42,6 +42,7 @@ namespace Game.Preview
         private GameObject xyPlanePreview;
         private GameObject zyPlanePreview;
         private GameObject playerXYPreview;
+        private GameObject playerZYPreview;
 
         private void Awake()
         {
@@ -352,7 +353,9 @@ namespace Game.Preview
 
             CleanupPlayerPreviews();
             
-            playerXYPreview = CreatePlayerPreviewObject("Player_Preview");
+            // Create player previews for both projection planes
+            playerXYPreview = CreatePlayerPreviewObject("Player_XY_Preview", ProjectionAxis.FlattenZ);
+            playerZYPreview = CreatePlayerPreviewObject("Player_ZY_Preview", ProjectionAxis.FlattenX);
         }
 
         private void CleanupPlayerPreviews()
@@ -363,10 +366,17 @@ namespace Game.Preview
                 playerXYPreview = null;
             }
 
+            if (playerZYPreview != null)
+            {
+                DestroyImmediate(playerZYPreview);
+                playerZYPreview = null;
+            }
+
+            // Clean up any remaining player preview objects as a safety measure
             GameObject[] allObjects = FindObjectsOfType<GameObject>(true);
             foreach (GameObject obj in allObjects)
             {
-                if (obj != null && obj.name.Contains("Player_Preview"))
+                if (obj != null && (obj.name.Contains("Player_XY_Preview") || obj.name.Contains("Player_ZY_Preview")))
                 {
                     if (obj.transform.parent == transform || obj.transform.IsChildOf(transform))
                     {
@@ -376,7 +386,7 @@ namespace Game.Preview
             }
         }
 
-        private GameObject CreatePlayerPreviewObject(string name)
+        private GameObject CreatePlayerPreviewObject(string name, ProjectionAxis axis)
         {
             if (!player) return null;
 
@@ -385,8 +395,9 @@ namespace Game.Preview
             
             CopyPlayerVisualComponents(player.gameObject, previewObj);
             
+            // Use proper position projection based on axis
             Vector3 currentPos = player.position;
-            Vector3 previewPos = new Vector3(-currentPos.z, currentPos.y, -currentPos.x);
+            Vector3 previewPos = ProjectPosition(currentPos, axis);
             previewObj.transform.position = previewPos;
             previewObj.transform.rotation = player.rotation;
             previewObj.transform.localScale = Vector3.one;
