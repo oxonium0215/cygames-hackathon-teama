@@ -314,7 +314,6 @@ GameObject:
   - component: {fileID: 278027689}
   - component: {fileID: 278027690}
   - component: {fileID: 278027691}
-  - component: {fileID: 278027692}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -591,7 +590,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 278027682}
+  m_GameObject: {fileID: 1888993280}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8, type: 3}
@@ -599,7 +598,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mainCamera: {fileID: 0}
   cameraTransform: {fileID: 0}
-  previewCameraOffset: {x: 16, y: 10, z: -16}
   previewCameraSize: 10
   transitionDuration: 0.5
   transitionCurve:
@@ -630,6 +628,8 @@ MonoBehaviour:
   geometryProjector: {fileID: 1888993281}
   playerMotor: {fileID: 278027690}
   playerRigidbody: {fileID: 278027683}
+  perspectiveProjectionManager: {fileID: 1888993281}
+  levelTransform: {fileID: 0}
   previewMaterial: {fileID: 2100000, guid: 2c35b4c0b9aa62d4f88460773c407559, type: 2}
   playerPreviewMaterial: {fileID: 2100000, guid: fb582f2f13d90094b990530431f3fe9c, type: 2}
 --- !u!1 &399384470
@@ -1307,6 +1307,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1888993282}
   - component: {fileID: 1888993281}
+  - component: {fileID: 278027692}
   m_Layer: 0
   m_Name: PerspectiveProjectionManager
   m_TagString: Untagged

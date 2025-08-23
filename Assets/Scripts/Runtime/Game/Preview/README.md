@@ -8,6 +8,7 @@ The 3D Stage Preview feature allows players to press and hold the V key to get a
 ### StagePreviewManager
 - **Location**: `Assets/Scripts/Runtime/Game/Preview/StagePreviewManager.cs`
 - **Purpose**: Manages the 3D preview functionality including camera transitions, terrain restoration, and preview overlays
+- **Attachment**: Component should be attached to the PerspectiveProjectionManager GameObject for better organization
 
 ### Input Action
 - **Action Name**: Preview3D
@@ -26,8 +27,8 @@ The 3D Stage Preview feature allows players to press and hold the V key to get a
 3. **Terrain Restoration**: Calls `GeometryProjector.ClearProjected()` to show terrain in original positions
 4. **Player Physics**: Stops player movement by setting `PlayerMotor.SetLateralEnabled(false)` and making rigidbody kinematic
 5. **Preview Overlays**: Creates semi-transparent previews of:
-   - Geometry projected onto XY plane (flatten Z)
-   - Geometry projected onto ZY plane (flatten X)  
+   - Geometry projected onto flatten Z plane 
+   - Geometry projected onto flatten X plane  
    - Player position on both projection planes
 
 ### When V Key is Released:
@@ -38,13 +39,15 @@ The 3D Stage Preview feature allows players to press and hold the V key to get a
 ## Setup Instructions
 
 ### In Unity Editor:
-1. **Add StagePreviewManager**: Add the `StagePreviewManager` component to a GameObject in your scene
-2. **Assign References**: In the inspector, assign:
+1. **Add StagePreviewManager**: The `StagePreviewManager` component should be attached to the PerspectiveProjectionManager GameObject for better organization
+2. **Assign References**: Component uses auto-discovery for most references:
    - Main Camera (auto-detected if not assigned)
    - Player Transform (auto-detected if Player tag exists)
    - Geometry Projector (auto-detected if in scene)
    - Player Motor (auto-detected from player)
    - Player Rigidbody (auto-detected from player)
+   - Perspective Projection Manager (auto-detected)
+   - Level Transform (auto-detected from "Level" GameObject)
    - Preview Material: Assign `GeometryPreviewMaterial`
    - Player Preview Material: Assign `PlayerPreviewMaterial`
 
