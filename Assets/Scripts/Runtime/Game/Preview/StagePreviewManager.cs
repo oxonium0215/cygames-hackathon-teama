@@ -346,9 +346,33 @@ namespace Game.Preview
         {
             if (!player || !playerPreviewMaterial) return;
 
-            if (playerXYPreview != null) DestroyImmediate(playerXYPreview);
+            // Ensure complete cleanup of any existing player preview objects
+            CleanupPlayerPreviews();
             
+            // Create single player preview at transformed coordinates
             playerXYPreview = CreatePlayerPreviewObject("Player_Preview");
+        }
+
+        private void CleanupPlayerPreviews()
+        {
+            if (playerXYPreview != null)
+            {
+                DestroyImmediate(playerXYPreview);
+                playerXYPreview = null;
+            }
+
+            // Clean up any orphaned player preview objects that might exist from previous runs
+            GameObject[] existingPreviews = GameObject.FindGameObjectsWithTag("Untagged");
+            foreach (GameObject obj in existingPreviews)
+            {
+                if (obj.name.Contains("Player_Preview") || obj.name.Contains("Player_XY_Preview") || obj.name.Contains("Player_ZY_Preview"))
+                {
+                    if (obj.transform.parent == transform)
+                    {
+                        DestroyImmediate(obj);
+                    }
+                }
+            }
         }
 
         private GameObject CreatePlayerPreviewObject(string name)
@@ -360,10 +384,13 @@ namespace Game.Preview
             
             CopyPlayerVisualComponents(player.gameObject, previewObj);
             
+            // Apply specific coordinate transformation: (x,y,z) = (-currentZ, currentY, -currentX)
             Vector3 currentPos = player.position;
             Vector3 previewPos = new Vector3(-currentPos.z, currentPos.y, -currentPos.x);
             previewObj.transform.position = previewPos;
             previewObj.transform.rotation = player.rotation;
+            
+            // Keep player preview at exactly the same size as the original player (no depth adjustment)
             previewObj.transform.localScale = player.localScale;
 
             ApplyPreviewMaterialRecursive(previewObj, playerPreviewMaterial);
@@ -463,11 +490,8 @@ namespace Game.Preview
                 zyPlanePreview = null;
             }
 
-            if (playerXYPreview != null)
-            {
-                DestroyImmediate(playerXYPreview);
-                playerXYPreview = null;
-            }
+            // Use dedicated cleanup for player previews to ensure all are removed
+            CleanupPlayerPreviews();
         }
 
         private void ReprojectGeometry()
