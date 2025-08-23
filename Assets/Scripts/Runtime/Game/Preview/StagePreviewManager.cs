@@ -282,7 +282,6 @@ namespace Game.Preview
             clone.transform.localPosition = ProjectPosition(original.position, axis);
             clone.transform.localRotation = original.rotation;
             
-            // Set uniform depth size
             Vector3 scale = original.localScale;
             if (axis == ProjectionAxis.FlattenZ)
             {
