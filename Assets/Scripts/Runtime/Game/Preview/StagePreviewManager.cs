@@ -15,7 +15,6 @@ namespace Game.Preview
         [Header("Camera Settings")]
         [SerializeField] private Camera mainCamera;
         [SerializeField] private Transform cameraTransform;
-        [SerializeField] private Vector3 previewCameraOffset = new Vector3(16f, 10f, -16f);
         [SerializeField] private float previewCameraSize = 10f;
         [SerializeField] private float transitionDuration = 0.5f;
         [SerializeField] private AnimationCurve transitionCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
@@ -25,6 +24,7 @@ namespace Game.Preview
         [SerializeField] private GeometryProjector geometryProjector;
         [SerializeField] private PlayerMotor playerMotor;
         [SerializeField] private Rigidbody playerRigidbody;
+        [SerializeField] private PerspectiveProjectionManager perspectiveProjectionManager;
 
         [Header("Preview Overlays")]
         [SerializeField] private Material previewMaterial;
@@ -39,7 +39,7 @@ namespace Game.Preview
         // Player state storage
         private Vector3 originalPlayerVelocity;
         private Vector3 originalPlayerAngularVelocity;
-        private bool wasPlayerKinematic;
+        private bool wasPlayerMotorEnabled;
 
         // Preview state
         private bool isPreviewActive = false;
@@ -61,6 +61,7 @@ namespace Game.Preview
             if (!geometryProjector) geometryProjector = FindObjectOfType<GeometryProjector>();
             if (!playerMotor && player) playerMotor = player.GetComponent<PlayerMotor>();
             if (!playerRigidbody && player) playerRigidbody = player.GetComponent<Rigidbody>();
+            if (!perspectiveProjectionManager) perspectiveProjectionManager = FindObjectOfType<PerspectiveProjectionManager>();
         }
 
         private void OnDestroy()
@@ -139,7 +140,12 @@ namespace Game.Preview
             {
                 originalPlayerVelocity = playerRigidbody.linearVelocity;
                 originalPlayerAngularVelocity = playerRigidbody.angularVelocity;
-                wasPlayerKinematic = playerRigidbody.isKinematic;
+            }
+            
+            // Save PlayerMotor state
+            if (playerMotor)
+            {
+                wasPlayerMotorEnabled = playerMotor.enabled;
             }
         }
 
@@ -156,15 +162,11 @@ namespace Game.Preview
                 geometryProjector.ClearProjected();
             }
 
-            // Calculate preview camera position
-            Vector3 targetPosition = originalCameraPosition;
+            // Calculate preview camera position - use absolute coordinates (16, player.y+10, -16)
+            Vector3 targetPosition = new Vector3(16f, originalCameraPosition.y + 10f, -16f);
             if (player)
             {
-                targetPosition = player.position + new Vector3(previewCameraOffset.x, previewCameraOffset.y, previewCameraOffset.z);
-            }
-            else
-            {
-                targetPosition += previewCameraOffset;
+                targetPosition.y = player.position.y + 10f;
             }
 
             // Smooth camera transition
@@ -237,6 +239,9 @@ namespace Game.Preview
 
             // Restore player physics
             RestorePlayerPhysics();
+            
+            // Reproject geometry back to current view
+            ReprojectGeometry();
 
             isPreviewActive = false;
             isTransitioning = false;
@@ -248,27 +253,20 @@ namespace Game.Preview
             {
                 playerRigidbody.linearVelocity = Vector3.zero;
                 playerRigidbody.angularVelocity = Vector3.zero;
-                playerRigidbody.isKinematic = true;
             }
 
             if (playerMotor)
             {
-                // Disable lateral movement but keep the player in position
-                playerMotor.SetLateralEnabled(false);
+                // Disable PlayerMotor component to prevent it from updating physics
+                playerMotor.enabled = false;
             }
         }
 
         private void RestorePlayerPhysics()
         {
-            if (playerRigidbody)
-            {
-                playerRigidbody.isKinematic = wasPlayerKinematic;
-                // Don't restore velocity immediately to avoid sudden movements
-            }
-
             if (playerMotor)
             {
-                playerMotor.SetLateralEnabled(true);
+                playerMotor.enabled = wasPlayerMotorEnabled;
             }
         }
 
@@ -376,34 +374,92 @@ namespace Game.Preview
 
         private GameObject CreatePlayerPreviewObject(string name, ProjectionAxis axis)
         {
-            GameObject previewObj = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            previewObj.name = name;
+            if (!player) return null;
+
+            // Create a copy of the player GameObject
+            GameObject previewObj = new GameObject(name);
             previewObj.transform.SetParent(transform);
+            
+            // Copy all visual components from the player
+            CopyPlayerVisualComponents(player.gameObject, previewObj);
             
             // Position the preview
             Vector3 previewPos = ProjectPosition(player.position, axis);
             previewObj.transform.position = previewPos;
+            previewObj.transform.rotation = player.rotation;
+            previewObj.transform.localScale = player.localScale;
+
+            // Apply preview material to all renderers
+            ApplyPreviewMaterialRecursive(previewObj, playerPreviewMaterial);
             
-            // Scale to match player size approximately
-            Collider playerCollider = player.GetComponent<Collider>();
-            if (playerCollider)
-            {
-                Bounds bounds = playerCollider.bounds;
-                previewObj.transform.localScale = new Vector3(bounds.size.x, bounds.size.y, bounds.size.z);
-            }
-
-            // Apply preview material
-            Renderer renderer = previewObj.GetComponent<Renderer>();
-            if (renderer)
-            {
-                renderer.material = playerPreviewMaterial;
-            }
-
-            // Remove collider since this is just for visualization
-            Collider collider = previewObj.GetComponent<Collider>();
-            if (collider) DestroyImmediate(collider);
+            // Remove all colliders since this is just for visualization
+            RemoveCollidersRecursive(previewObj);
 
             return previewObj;
+        }
+
+        private void CopyPlayerVisualComponents(GameObject source, GameObject target)
+        {
+            // Copy MeshRenderer and MeshFilter if they exist
+            MeshRenderer sourceMeshRenderer = source.GetComponent<MeshRenderer>();
+            MeshFilter sourceMeshFilter = source.GetComponent<MeshFilter>();
+            
+            if (sourceMeshRenderer && sourceMeshFilter)
+            {
+                MeshRenderer targetMeshRenderer = target.AddComponent<MeshRenderer>();
+                MeshFilter targetMeshFilter = target.AddComponent<MeshFilter>();
+                
+                targetMeshFilter.mesh = sourceMeshFilter.mesh;
+                targetMeshRenderer.materials = sourceMeshRenderer.materials;
+            }
+
+            // Recursively copy child objects with visual components
+            foreach (Transform child in source.transform)
+            {
+                MeshRenderer childRenderer = child.GetComponent<MeshRenderer>();
+                MeshFilter childFilter = child.GetComponent<MeshFilter>();
+                
+                if (childRenderer || childFilter)
+                {
+                    GameObject childCopy = new GameObject(child.name);
+                    childCopy.transform.SetParent(target.transform);
+                    childCopy.transform.localPosition = child.localPosition;
+                    childCopy.transform.localRotation = child.localRotation;
+                    childCopy.transform.localScale = child.localScale;
+                    
+                    CopyPlayerVisualComponents(child.gameObject, childCopy);
+                }
+            }
+        }
+
+        private void ApplyPreviewMaterialRecursive(GameObject obj, Material previewMat)
+        {
+            if (!previewMat) return;
+            
+            Renderer renderer = obj.GetComponent<Renderer>();
+            if (renderer)
+            {
+                Material[] materials = new Material[renderer.materials.Length];
+                for (int i = 0; i < materials.Length; i++)
+                {
+                    materials[i] = previewMat;
+                }
+                renderer.materials = materials;
+            }
+
+            foreach (Transform child in obj.transform)
+            {
+                ApplyPreviewMaterialRecursive(child.gameObject, previewMat);
+            }
+        }
+
+        private void RemoveCollidersRecursive(GameObject obj)
+        {
+            Collider[] colliders = obj.GetComponentsInChildren<Collider>();
+            for (int i = colliders.Length - 1; i >= 0; i--)
+            {
+                DestroyImmediate(colliders[i]);
+            }
         }
 
         private void DestroyPreviewOverlays()
@@ -431,6 +487,33 @@ namespace Game.Preview
                 DestroyImmediate(playerZYPreview);
                 playerZYPreview = null;
             }
+        }
+
+        private void ReprojectGeometry()
+        {
+            if (!geometryProjector) return;
+
+            // Determine current projection axis based on camera orientation
+            // If camera is looking along X-axis (viewB), use FlattenX (ZY projection)  
+            // If camera is looking along Z-axis (viewA), use FlattenZ (XY projection)
+            ProjectionAxis currentAxis = ProjectionAxis.FlattenZ; // Default XY
+            
+            if (cameraTransform)
+            {
+                // Check camera's Y rotation to determine which view we're in
+                float yaw = cameraTransform.eulerAngles.y;
+                // Normalize yaw to 0-360 range
+                while (yaw < 0) yaw += 360;
+                while (yaw >= 360) yaw -= 360;
+                
+                // If yaw is close to -90 degrees (270), we're in view B (ZY)
+                if (Mathf.Abs(yaw - 270f) < 45f)
+                {
+                    currentAxis = ProjectionAxis.FlattenX; // ZY projection
+                }
+            }
+
+            geometryProjector.Rebuild(currentAxis);
         }
 
         public bool IsPreviewActive => isPreviewActive;
