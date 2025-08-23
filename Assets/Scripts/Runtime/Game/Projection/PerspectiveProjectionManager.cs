@@ -1,9 +1,9 @@
 using System.Collections;
+using System.Reflection;
 using UnityEngine;
 using Game.Core;
 using Game.Level;
 using Game.Player;
-using Game.Preview;
 
 namespace Game.Projection
 {
@@ -16,7 +16,7 @@ namespace Game.Projection
         [SerializeField] private PlayerMotor player;
         [SerializeField] private Transform playerTransform;
         [SerializeField] private Collider playerCollider; // used to resolve overlaps
-        [SerializeField] private StagePreviewManager stagePreviewManager;
+        [SerializeField] private MonoBehaviour stagePreviewManager;
 
         [Header("Camera")]
         [SerializeField] private float cameraDistance = 15f;
@@ -95,7 +95,12 @@ namespace Game.Projection
             if (playerTransform) playerRb = playerTransform.GetComponent<Rigidbody>();
             
             // Auto-discover StagePreviewManager if not assigned
-            if (!stagePreviewManager) stagePreviewManager = FindFirstObjectByType<StagePreviewManager>();
+            if (!stagePreviewManager) 
+            {
+                var previewManager = FindFirstObjectByType(System.Type.GetType("Game.Preview.StagePreviewManager, Game.Preview"));
+                if (previewManager != null) 
+                    stagePreviewManager = previewManager as MonoBehaviour;
+            }
 
             // Initialize services
             projectionController = new ProjectionController();
@@ -112,11 +117,25 @@ namespace Game.Projection
         public void TogglePerspective()
         {
             // Block perspective switching if preview is active or transitioning
-            if (stagePreviewManager && (stagePreviewManager.IsPreviewActive || stagePreviewManager.IsTransitioning))
+            if (stagePreviewManager && (IsPreviewManagerActive() || IsPreviewManagerTransitioning()))
                 return;
                 
             if (projectionController?.IsRotating != true)
                 StartCoroutine(SwitchRoutine(1 - viewIndex));
+        }
+
+        private bool IsPreviewManagerActive()
+        {
+            if (!stagePreviewManager) return false;
+            var property = stagePreviewManager.GetType().GetProperty("IsPreviewActive");
+            return property != null && (bool)property.GetValue(stagePreviewManager);
+        }
+
+        private bool IsPreviewManagerTransitioning()
+        {
+            if (!stagePreviewManager) return false;
+            var property = stagePreviewManager.GetType().GetProperty("IsTransitioning");
+            return property != null && (bool)property.GetValue(stagePreviewManager);
         }
 
         private IEnumerator SwitchRoutine(int nextIndex)
