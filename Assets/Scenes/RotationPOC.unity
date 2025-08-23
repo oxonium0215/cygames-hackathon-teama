@@ -314,6 +314,7 @@ GameObject:
   - component: {fileID: 278027689}
   - component: {fileID: 278027690}
   - component: {fileID: 278027691}
+  - component: {fileID: 278027692}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -468,7 +469,7 @@ MonoBehaviour:
   - m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 278027691}
-        m_TargetAssemblyTypeName: POC.Input.PlayerInputRouter, Assembly-CSharp
+        m_TargetAssemblyTypeName: Game.Input.PlayerInputRelay, Game.Input
         m_MethodName: OnMove
         m_Mode: 0
         m_Arguments:
@@ -484,7 +485,7 @@ MonoBehaviour:
   - m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 278027691}
-        m_TargetAssemblyTypeName: POC.Input.PlayerInputRouter, Assembly-CSharp
+        m_TargetAssemblyTypeName: Game.Input.PlayerInputRelay, Game.Input
         m_MethodName: OnJump
         m_Mode: 0
         m_Arguments:
@@ -500,7 +501,7 @@ MonoBehaviour:
   - m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 278027691}
-        m_TargetAssemblyTypeName: POC.Input.PlayerInputRouter, Assembly-CSharp
+        m_TargetAssemblyTypeName: Game.Input.PlayerInputRelay, Game.Input
         m_MethodName: OnSwitchView
         m_Mode: 0
         m_Arguments:
@@ -513,6 +514,22 @@ MonoBehaviour:
         m_CallState: 2
     m_ActionId: d2e17c6d-f9dc-415f-a6b9-bde72ac28a03
     m_ActionName: 'Gameplay/SwitchView[/Keyboard/q,/Keyboard/e]'
+  - m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 278027691}
+        m_TargetAssemblyTypeName: Game.Input.PlayerInputRelay, Game.Input
+        m_MethodName: OnPreview3D
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+    m_ActionId: f3a5b2c8-e1d4-4a8f-9b6c-3e7d8a9f0c1b
+    m_ActionName: 'Gameplay/Preview3D[/Keyboard/v]'
   m_NeverAutoSwitchControlSchemes: 0
   m_DefaultControlScheme: 
   m_DefaultActionMap: Gameplay
@@ -567,6 +584,54 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   motor: {fileID: 278027690}
   perspective: {fileID: 1888993281}
+  stagePreview: {fileID: 278027692}
+--- !u!114 &278027692
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 278027682}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mainCamera: {fileID: 0}
+  cameraTransform: {fileID: 0}
+  previewCameraOffset: {x: 16, y: 10, z: -16}
+  previewCameraSize: 10
+  transitionDuration: 0.5
+  transitionCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  player: {fileID: 278027687}
+  geometryProjector: {fileID: 1888993281}
+  playerMotor: {fileID: 278027690}
+  playerRigidbody: {fileID: 278027686}
+  previewMaterial: {fileID: 2100000, guid: 2c35b4c0b9aa62d4f88460773c407559, type: 2}
+  playerPreviewMaterial: {fileID: 2100000, guid: fb582f2f13d90094b990530431f3fe9c, type: 2}
 --- !u!1 &399384470
 GameObject:
   m_ObjectHideFlags: 0
