@@ -6,8 +6,24 @@ using Game.Projection;
 
 namespace Game.Preview
 {
+    /// <summary>
+    /// Manages stage preview functionality including camera transitions and preview object generation.
+    /// This component can be attached to any GameObject as it finds its dependencies dynamically.
+    /// For better organization, consider attaching it to the same GameObject as PerspectiveProjectionManager.
+    /// </summary>
     public class StagePreviewManager : MonoBehaviour
     {
+        #region Constants
+        private const int MAX_RECURSION_DEPTH = 15;
+        private const int MAX_PLAYER_COPY_DEPTH = 10;
+        private const float DEFAULT_CAMERA_HEIGHT_OFFSET = 10f;
+        private const float DEFAULT_CAMERA_X_POSITION = 16f;
+        private const float DEFAULT_CAMERA_Z_POSITION = -16f;
+        private const float DEFAULT_CAMERA_ANGLE_X = 30f;
+        private const float DEFAULT_CAMERA_ANGLE_Y = -45f;
+        private const float FLATTENED_AXIS_SCALE = 2f;
+        #endregion
+
         [Header("Camera Settings")]
         [SerializeField] private Camera mainCamera;
         [SerializeField] private Transform cameraTransform;
@@ -102,7 +118,33 @@ namespace Game.Preview
 
         private bool ValidateComponents()
         {
-            return mainCamera && cameraTransform && geometryProjector;
+            bool isValid = true;
+            
+            if (!mainCamera)
+            {
+                Debug.LogWarning("StagePreviewManager: mainCamera is not assigned");
+                isValid = false;
+            }
+            
+            if (!cameraTransform)
+            {
+                Debug.LogWarning("StagePreviewManager: cameraTransform is not assigned");
+                isValid = false;
+            }
+            
+            if (!geometryProjector)
+            {
+                Debug.LogWarning("StagePreviewManager: geometryProjector is not assigned");
+                isValid = false;
+            }
+            
+            if (!player)
+            {
+                Debug.LogWarning("StagePreviewManager: player is not assigned");
+                isValid = false;
+            }
+            
+            return isValid;
         }
 
         private void SaveCurrentState()
@@ -137,13 +179,13 @@ namespace Game.Preview
                 geometryProjector.ClearProjected();
             }
 
-            Vector3 targetPosition = new Vector3(16f, originalCameraPosition.y + 10f, -16f);
+            Vector3 targetPosition = new Vector3(DEFAULT_CAMERA_X_POSITION, originalCameraPosition.y + DEFAULT_CAMERA_HEIGHT_OFFSET, DEFAULT_CAMERA_Z_POSITION);
             if (player)
             {
-                targetPosition.y = player.position.y + 10f;
+                targetPosition.y = player.position.y + DEFAULT_CAMERA_HEIGHT_OFFSET;
             }
 
-            Quaternion targetRotation = Quaternion.Euler(30f, -45f, 0f);
+            Quaternion targetRotation = Quaternion.Euler(DEFAULT_CAMERA_ANGLE_X, DEFAULT_CAMERA_ANGLE_Y, 0f);
             
             float elapsed = 0f;
             Vector3 startPos = originalCameraPosition;
@@ -273,7 +315,7 @@ namespace Game.Preview
 
         private void CloneObjectForPreview(Transform original, Transform parent, ProjectionAxis axis)
         {
-            CloneObjectForPreviewRecursive(original, parent, axis, 0, 15);
+            CloneObjectForPreviewRecursive(original, parent, axis, 0, MAX_RECURSION_DEPTH);
         }
 
         private void CloneObjectForPreviewRecursive(Transform original, Transform parent, ProjectionAxis axis, int currentDepth, int maxDepth)
@@ -293,11 +335,11 @@ namespace Game.Preview
             Vector3 scale = original.localScale;
             if (axis == ProjectionAxis.FlattenZ)
             {
-                scale.z = 2f;
+                scale.z = FLATTENED_AXIS_SCALE;
             }
             else if (axis == ProjectionAxis.FlattenX)
             {
-                scale.x = 2f;
+                scale.x = FLATTENED_AXIS_SCALE;
             }
             clone.transform.localScale = scale;
 
@@ -418,7 +460,7 @@ namespace Game.Preview
 
         private void CopyPlayerVisualComponents(GameObject source, GameObject target)
         {
-            CopyPlayerVisualComponentsRecursive(source, target, 0, 10);
+            CopyPlayerVisualComponentsRecursive(source, target, 0, MAX_PLAYER_COPY_DEPTH);
         }
 
         private void CopyPlayerVisualComponentsRecursive(GameObject source, GameObject target, int currentDepth, int maxDepth)
@@ -465,10 +507,10 @@ namespace Game.Preview
 
         private void ApplyPreviewMaterialRecursive(GameObject obj, Material previewMat)
         {
-            ApplyPreviewMaterialRecursiveInternal(obj, previewMat, 0, 15);
+            ApplyPreviewMaterialRecursive(obj, previewMat, 0, MAX_RECURSION_DEPTH);
         }
 
-        private void ApplyPreviewMaterialRecursiveInternal(GameObject obj, Material previewMat, int currentDepth, int maxDepth)
+        private void ApplyPreviewMaterialRecursive(GameObject obj, Material previewMat, int currentDepth, int maxDepth)
         {
             if (!previewMat || currentDepth >= maxDepth) return;
             
@@ -486,7 +528,7 @@ namespace Game.Preview
             foreach (Transform child in obj.transform)
             {
                 if (child == null) continue;
-                ApplyPreviewMaterialRecursiveInternal(child.gameObject, previewMat, currentDepth + 1, maxDepth);
+                ApplyPreviewMaterialRecursive(child.gameObject, previewMat, currentDepth + 1, maxDepth);
             }
         }
 
