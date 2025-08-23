@@ -72,13 +72,8 @@ namespace Game.Input
 
         public void OnSwitchView(InputAction.CallbackContext ctx)
         {
-            if (ctx.performed)
-            {
-                // Prevent viewpoint changes during preview
-                if (stagePreview != null && stagePreview.IsPreviewActive) return;
-                
+            if (ctx.performed) 
                 perspective?.TogglePerspective();
-            }
         }
 
         public void OnPreview3D(InputAction.CallbackContext ctx)

@@ -6,8 +6,24 @@ using Game.Projection;
 
 namespace Game.Preview
 {
+    /// <summary>
+    /// Manages stage preview functionality including camera transitions and preview object generation.
+    /// This component can be attached to any GameObject as it finds its dependencies dynamically.
+    /// For better organization, consider attaching it to the same GameObject as PerspectiveProjectionManager.
+    /// </summary>
     public class StagePreviewManager : MonoBehaviour
     {
+        #region Constants
+        private const int MAX_RECURSION_DEPTH = 15;
+        private const int MAX_PLAYER_COPY_DEPTH = 10;
+        private const float DEFAULT_CAMERA_HEIGHT_OFFSET = 10f;
+        private const float DEFAULT_CAMERA_X_POSITION = 16f;
+        private const float DEFAULT_CAMERA_Z_POSITION = -16f;
+        private const float DEFAULT_CAMERA_ANGLE_X = 30f;
+        private const float DEFAULT_CAMERA_ANGLE_Y = -45f;
+        private const float FLATTENED_AXIS_SCALE = 2f;
+        #endregion
+
         [Header("Camera Settings")]
         [SerializeField] private Camera mainCamera;
         [SerializeField] private Transform cameraTransform;
@@ -21,6 +37,7 @@ namespace Game.Preview
         [SerializeField] private PlayerMotor playerMotor;
         [SerializeField] private Rigidbody playerRigidbody;
         [SerializeField] private PerspectiveProjectionManager perspectiveProjectionManager;
+        [SerializeField] private Transform levelTransform;
 
         [Header("Preview Overlays")]
         [SerializeField] private Material previewMaterial;
@@ -39,9 +56,9 @@ namespace Game.Preview
         private bool isTransitioning = false;
         private Coroutine transitionCoroutine;
 
-        private GameObject xyPlanePreview;
-        private GameObject zyPlanePreview;
-        private GameObject playerXYPreview;
+        private GameObject flattenZPlanePreview;
+        private GameObject flattenXPlanePreview;
+        private GameObject playerPreview;
 
         private void Awake()
         {
@@ -52,6 +69,7 @@ namespace Game.Preview
             if (!playerMotor && player) playerMotor = player.GetComponent<PlayerMotor>();
             if (!playerRigidbody && player) playerRigidbody = player.GetComponent<Rigidbody>();
             if (!perspectiveProjectionManager) perspectiveProjectionManager = FindFirstObjectByType<PerspectiveProjectionManager>();
+            if (!levelTransform) levelTransform = GameObject.Find("Level")?.transform;
         }
 
         private void OnDestroy()
@@ -69,7 +87,8 @@ namespace Game.Preview
             if (isPreviewActive || isTransitioning) return;
             if (!ValidateComponents()) return;
             
-            if (perspectiveProjectionManager && perspectiveProjectionManager.IsSwitching) return;
+            // Block if perspective projection is switching OR if we are in preview mode
+            if (perspectiveProjectionManager && (perspectiveProjectionManager.IsSwitching || isPreviewActive)) return;
 
             SaveCurrentState();
             
@@ -86,6 +105,7 @@ namespace Game.Preview
             if (!isPreviewActive || isTransitioning) return;
             if (!ValidateComponents()) return;
             
+            // Block if perspective projection is switching
             if (perspectiveProjectionManager && perspectiveProjectionManager.IsSwitching) return;
 
             if (transitionCoroutine != null)
@@ -98,7 +118,33 @@ namespace Game.Preview
 
         private bool ValidateComponents()
         {
-            return mainCamera && cameraTransform && geometryProjector;
+            bool isValid = true;
+            
+            if (!mainCamera)
+            {
+                Debug.LogWarning("StagePreviewManager: mainCamera is not assigned");
+                isValid = false;
+            }
+            
+            if (!cameraTransform)
+            {
+                Debug.LogWarning("StagePreviewManager: cameraTransform is not assigned");
+                isValid = false;
+            }
+            
+            if (!geometryProjector)
+            {
+                Debug.LogWarning("StagePreviewManager: geometryProjector is not assigned");
+                isValid = false;
+            }
+            
+            if (!player)
+            {
+                Debug.LogWarning("StagePreviewManager: player is not assigned");
+                isValid = false;
+            }
+            
+            return isValid;
         }
 
         private void SaveCurrentState()
@@ -133,13 +179,13 @@ namespace Game.Preview
                 geometryProjector.ClearProjected();
             }
 
-            Vector3 targetPosition = new Vector3(16f, originalCameraPosition.y + 10f, -16f);
+            Vector3 targetPosition = new Vector3(DEFAULT_CAMERA_X_POSITION, originalCameraPosition.y + DEFAULT_CAMERA_HEIGHT_OFFSET, DEFAULT_CAMERA_Z_POSITION);
             if (player)
             {
-                targetPosition.y = player.position.y + 10f;
+                targetPosition.y = player.position.y + DEFAULT_CAMERA_HEIGHT_OFFSET;
             }
 
-            Quaternion targetRotation = Quaternion.Euler(30f, -45f, 0f);
+            Quaternion targetRotation = Quaternion.Euler(DEFAULT_CAMERA_ANGLE_X, DEFAULT_CAMERA_ANGLE_Y, 0f);
             
             float elapsed = 0f;
             Vector3 startPos = originalCameraPosition;
@@ -169,7 +215,6 @@ namespace Game.Preview
 
             isPreviewActive = true;
             isTransitioning = false;
-            transitionCoroutine = null;
         }
 
         private IEnumerator TransitionFromPreview()
@@ -206,7 +251,6 @@ namespace Game.Preview
 
             isPreviewActive = false;
             isTransitioning = false;
-            transitionCoroutine = null;
         }
 
         private void StopPlayerPhysics()
@@ -237,8 +281,8 @@ namespace Game.Preview
 
             if (previewMaterial)
             {
-                CreatePlanePreview(ref xyPlanePreview, "XY_Preview", ProjectionAxis.FlattenZ);
-                CreatePlanePreview(ref zyPlanePreview, "ZY_Preview", ProjectionAxis.FlattenX);
+                CreatePlanePreview(ref flattenZPlanePreview, "FlattenZ_Preview", ProjectionAxis.FlattenZ);
+                CreatePlanePreview(ref flattenXPlanePreview, "FlattenX_Preview", ProjectionAxis.FlattenX);
             }
 
             if (playerPreviewMaterial && player)
@@ -255,7 +299,9 @@ namespace Game.Preview
             }
 
             previewObject = new GameObject(name);
-            previewObject.transform.SetParent(transform);
+            // Parent to Level instead of this StagePreviewManager
+            Transform parentTransform = levelTransform ? levelTransform : transform;
+            previewObject.transform.SetParent(parentTransform);
 
             Transform sourceRoot = geometryProjector.SourceRoot;
             if (sourceRoot)
@@ -269,12 +315,15 @@ namespace Game.Preview
 
         private void CloneObjectForPreview(Transform original, Transform parent, ProjectionAxis axis)
         {
-            CloneObjectForPreviewRecursive(original, parent, axis, 0, 15);
+            CloneObjectForPreviewRecursive(original, parent, axis, 0, MAX_RECURSION_DEPTH);
         }
 
         private void CloneObjectForPreviewRecursive(Transform original, Transform parent, ProjectionAxis axis, int currentDepth, int maxDepth)
         {
             if (currentDepth >= maxDepth) return;
+            
+            // Skip if original is already a preview object to prevent recursive preview generation
+            if (original.name.Contains("Preview")) return;
 
             GameObject clone = new GameObject(original.name + "_Preview");
             clone.transform.SetParent(parent);
@@ -282,14 +331,15 @@ namespace Game.Preview
             clone.transform.localPosition = ProjectPosition(original.position, axis);
             clone.transform.localRotation = original.rotation;
             
+            // Set uniform depth size
             Vector3 scale = original.localScale;
             if (axis == ProjectionAxis.FlattenZ)
             {
-                scale.z = 2f;
+                scale.z = FLATTENED_AXIS_SCALE;
             }
             else if (axis == ProjectionAxis.FlattenX)
             {
-                scale.x = 2f;
+                scale.x = FLATTENED_AXIS_SCALE;
             }
             clone.transform.localScale = scale;
 
@@ -308,6 +358,8 @@ namespace Game.Preview
             foreach (Transform child in original)
             {
                 if (child == null) continue;
+                // Skip if child is already a preview object to prevent recursive preview generation
+                if (child.name.Contains("Preview")) continue;
                 CloneObjectForPreviewRecursive(child, clone.transform, axis, currentDepth + 1, maxDepth);
             }
         }
@@ -350,29 +402,35 @@ namespace Game.Preview
         private void CreatePlayerPreviews()
         {
             if (!player || !playerPreviewMaterial) return;
-            
-            if (isTransitioning) return;
-            
+
             CleanupPlayerPreviews();
             
-            // Always create a new preview after cleanup
-            playerXYPreview = CreatePlayerPreviewObject("Player_Preview");
+            playerPreview = CreatePlayerPreviewObject("Player_Preview");
         }
 
         private void CleanupPlayerPreviews()
         {
-            if (playerXYPreview != null)
+            if (playerPreview != null)
             {
-                DestroyImmediate(playerXYPreview);
-                playerXYPreview = null;
+                DestroyImmediate(playerPreview);
+                playerPreview = null;
             }
+
+            // Check both under Level and under this transform for cleanup
+            Transform[] searchTransforms = { levelTransform, transform };
             
-            GameObject[] allGameObjects = FindObjectsOfType<GameObject>(true);
-            foreach (GameObject obj in allGameObjects)
+            foreach (Transform searchTransform in searchTransforms)
             {
-                if (obj != null && obj.name.Contains("Player_Preview"))
+                if (searchTransform == null) continue;
+                
+                // Use GetComponentsInChildren to find all preview objects in hierarchy
+                Transform[] allChildren = searchTransform.GetComponentsInChildren<Transform>(true);
+                foreach (Transform child in allChildren)
                 {
-                    DestroyImmediate(obj);
+                    if (child != null && child.name.Contains("Player_Preview"))
+                    {
+                        DestroyImmediate(child.gameObject);
+                    }
                 }
             }
         }
@@ -382,27 +440,36 @@ namespace Game.Preview
             if (!player) return null;
 
             GameObject previewObj = new GameObject(name);
-            previewObj.transform.SetParent(transform);
+            // Parent to Level instead of this StagePreviewManager
+            Transform parentTransform = levelTransform ? levelTransform : transform;
+            previewObj.transform.SetParent(parentTransform);
             
             CopyPlayerVisualComponents(player.gameObject, previewObj);
             
-            // Position the preview on the XY projection plane (flatten Z)
             Vector3 currentPos = player.position;
-            ProjectionAxis currentAxis = GetCurrentProjectionAxis();
-            Vector3 previewPos = ProjectPosition(currentPos, currentAxis);
-            
+            Vector3 previewPos = new Vector3(-currentPos.z, currentPos.y, -currentPos.x);
             previewObj.transform.position = previewPos;
             previewObj.transform.rotation = player.rotation;
             previewObj.transform.localScale = player.localScale;
 
-            ApplyPreviewMaterial(previewObj, playerPreviewMaterial);
-            RemoveColliders(previewObj);
+            ApplyPreviewMaterialRecursive(previewObj, playerPreviewMaterial);
+            RemoveCollidersRecursive(previewObj);
 
             return previewObj;
         }
 
         private void CopyPlayerVisualComponents(GameObject source, GameObject target)
         {
+            CopyPlayerVisualComponentsRecursive(source, target, 0, MAX_PLAYER_COPY_DEPTH);
+        }
+
+        private void CopyPlayerVisualComponentsRecursive(GameObject source, GameObject target, int currentDepth, int maxDepth)
+        {
+            if (currentDepth >= maxDepth) return;
+            
+            // Skip if source is already a preview object to prevent recursive preview generation
+            if (source.name.Contains("Preview")) return;
+
             MeshRenderer sourceMeshRenderer = source.GetComponent<MeshRenderer>();
             MeshFilter sourceMeshFilter = source.GetComponent<MeshFilter>();
             
@@ -414,11 +481,38 @@ namespace Game.Preview
                 targetMeshFilter.mesh = sourceMeshFilter.mesh;
                 targetMeshRenderer.materials = sourceMeshRenderer.materials;
             }
+
+            foreach (Transform child in source.transform)
+            {
+                if (child == null) continue;
+                
+                // Skip if child is already a preview object to prevent recursive preview generation
+                if (child.name.Contains("Preview")) continue;
+
+                MeshRenderer childRenderer = child.GetComponent<MeshRenderer>();
+                MeshFilter childFilter = child.GetComponent<MeshFilter>();
+                
+                if (childRenderer || childFilter)
+                {
+                    GameObject childCopy = new GameObject(child.name);
+                    childCopy.transform.SetParent(target.transform);
+                    childCopy.transform.localPosition = child.localPosition;
+                    childCopy.transform.localRotation = child.localRotation;
+                    childCopy.transform.localScale = child.localScale;
+                    
+                    CopyPlayerVisualComponentsRecursive(child.gameObject, childCopy, currentDepth + 1, maxDepth);
+                }
+            }
         }
 
-        private void ApplyPreviewMaterial(GameObject obj, Material previewMat)
+        private void ApplyPreviewMaterialRecursive(GameObject obj, Material previewMat)
         {
-            if (!previewMat) return;
+            ApplyPreviewMaterialRecursive(obj, previewMat, 0, MAX_RECURSION_DEPTH);
+        }
+
+        private void ApplyPreviewMaterialRecursive(GameObject obj, Material previewMat, int currentDepth, int maxDepth)
+        {
+            if (!previewMat || currentDepth >= maxDepth) return;
             
             Renderer renderer = obj.GetComponent<Renderer>();
             if (renderer)
@@ -430,31 +524,38 @@ namespace Game.Preview
                 }
                 renderer.materials = materials;
             }
+
+            foreach (Transform child in obj.transform)
+            {
+                if (child == null) continue;
+                ApplyPreviewMaterialRecursive(child.gameObject, previewMat, currentDepth + 1, maxDepth);
+            }
         }
 
-        private void RemoveColliders(GameObject obj)
+        private void RemoveCollidersRecursive(GameObject obj)
         {
-            Collider collider = obj.GetComponent<Collider>();
-            if (collider != null)
+            Collider[] colliders = obj.GetComponentsInChildren<Collider>();
+            for (int i = colliders.Length - 1; i >= 0; i--)
             {
-                DestroyImmediate(collider);
+                DestroyImmediate(colliders[i]);
             }
         }
 
         private void DestroyPreviewOverlays()
         {
-            if (xyPlanePreview != null)
+            if (flattenZPlanePreview != null)
             {
-                DestroyImmediate(xyPlanePreview);
-                xyPlanePreview = null;
+                DestroyImmediate(flattenZPlanePreview);
+                flattenZPlanePreview = null;
             }
 
-            if (zyPlanePreview != null)
+            if (flattenXPlanePreview != null)
             {
-                DestroyImmediate(zyPlanePreview);
-                zyPlanePreview = null;
+                DestroyImmediate(flattenXPlanePreview);
+                flattenXPlanePreview = null;
             }
 
+            // Use dedicated cleanup for player previews
             CleanupPlayerPreviews();
         }
 
