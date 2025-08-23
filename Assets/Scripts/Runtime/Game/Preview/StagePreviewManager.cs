@@ -355,10 +355,8 @@ namespace Game.Preview
             
             CleanupPlayerPreviews();
             
-            if (playerXYPreview == null)
-            {
-                playerXYPreview = CreatePlayerPreviewObject("Player_Preview");
-            }
+            // Always create a new preview after cleanup
+            playerXYPreview = CreatePlayerPreviewObject("Player_Preview");
         }
 
         private void CleanupPlayerPreviews()
@@ -388,11 +386,14 @@ namespace Game.Preview
             
             CopyPlayerVisualComponents(player.gameObject, previewObj);
             
+            // Position the preview on the XY projection plane (flatten Z)
             Vector3 currentPos = player.position;
-            Vector3 previewPos = new Vector3(-currentPos.z, currentPos.y, -currentPos.x);
+            ProjectionAxis currentAxis = GetCurrentProjectionAxis();
+            Vector3 previewPos = ProjectPosition(currentPos, currentAxis);
+            
             previewObj.transform.position = previewPos;
             previewObj.transform.rotation = player.rotation;
-            previewObj.transform.localScale = Vector3.one;
+            previewObj.transform.localScale = player.localScale;
 
             ApplyPreviewMaterialRecursive(previewObj, playerPreviewMaterial);
             RemoveCollidersRecursive(previewObj);
