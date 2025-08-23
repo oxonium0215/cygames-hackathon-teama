@@ -1,12 +1,11 @@
 {
-    "name": "Game.Input",
-    "rootNamespace": "Game.Input",
+    "name": "Game.Preview",
+    "rootNamespace": "Game.Preview",
     "references": [
         "Game.Core",
-        "Game.Player",
-        "Game.Projection",
-        "Game.Preview",
-        "Unity.InputSystem"
+        "Game.Player", 
+        "Game.Level",
+        "Game.Projection"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
