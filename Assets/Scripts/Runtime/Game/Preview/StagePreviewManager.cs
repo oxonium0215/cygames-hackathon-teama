@@ -63,9 +63,22 @@ namespace Game.Preview
             if (!playerRigidbody && player) playerRigidbody = player.GetComponent<Rigidbody>();
         }
 
+        private void OnDestroy()
+        {
+            // Clean up any remaining preview objects
+            DestroyPreviewOverlays();
+            
+            // Stop any running coroutines
+            if (transitionCoroutine != null)
+            {
+                StopCoroutine(transitionCoroutine);
+            }
+        }
+
         public void StartPreview()
         {
             if (isPreviewActive || isTransitioning) return;
+            if (!ValidateComponents()) return;
 
             SaveCurrentState();
             
@@ -80,6 +93,7 @@ namespace Game.Preview
         public void EndPreview()
         {
             if (!isPreviewActive || isTransitioning) return;
+            if (!ValidateComponents()) return;
 
             if (transitionCoroutine != null)
             {
@@ -87,6 +101,27 @@ namespace Game.Preview
             }
             
             transitionCoroutine = StartCoroutine(TransitionFromPreview());
+        }
+
+        private bool ValidateComponents()
+        {
+            if (!mainCamera || !cameraTransform)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.LogWarning("[StagePreview] Main camera or camera transform not found.");
+#endif
+                return false;
+            }
+
+            if (!geometryProjector)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.LogWarning("[StagePreview] GeometryProjector not found.");
+#endif
+                return false;
+            }
+
+            return true;
         }
 
         private void SaveCurrentState()
@@ -241,14 +276,21 @@ namespace Game.Preview
         {
             if (!geometryProjector || !geometryProjector.SourceRoot) return;
 
-            // Create XY plane preview (flatten Z)
-            CreatePlanePreview(ref xyPlanePreview, "XY_Preview", ProjectionAxis.FlattenZ);
-            
-            // Create ZY plane preview (flatten X)  
-            CreatePlanePreview(ref zyPlanePreview, "ZY_Preview", ProjectionAxis.FlattenX);
+            // Only create overlays if preview material is assigned
+            if (previewMaterial)
+            {
+                // Create XY plane preview (flatten Z)
+                CreatePlanePreview(ref xyPlanePreview, "XY_Preview", ProjectionAxis.FlattenZ);
+                
+                // Create ZY plane preview (flatten X)  
+                CreatePlanePreview(ref zyPlanePreview, "ZY_Preview", ProjectionAxis.FlattenX);
+            }
 
-            // Create player position previews
-            CreatePlayerPreviews();
+            // Create player position previews if player preview material is assigned
+            if (playerPreviewMaterial)
+            {
+                CreatePlayerPreviews();
+            }
         }
 
         private void CreatePlanePreview(ref GameObject previewObject, string name, ProjectionAxis axis)
