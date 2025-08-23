@@ -629,7 +629,7 @@ MonoBehaviour:
   player: {fileID: 278027687}
   geometryProjector: {fileID: 1888993281}
   playerMotor: {fileID: 278027690}
-  playerRigidbody: {fileID: 278027686}
+  playerRigidbody: {fileID: 278027683}
   previewMaterial: {fileID: 2100000, guid: 2c35b4c0b9aa62d4f88460773c407559, type: 2}
   playerPreviewMaterial: {fileID: 2100000, guid: fb582f2f13d90094b990530431f3fe9c, type: 2}
 --- !u!1 &399384470
