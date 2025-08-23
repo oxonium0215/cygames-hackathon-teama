@@ -68,6 +68,8 @@ namespace Game.Preview
         {
             if (isPreviewActive || isTransitioning) return;
             if (!ValidateComponents()) return;
+            
+            if (perspectiveProjectionManager && perspectiveProjectionManager.IsSwitching) return;
 
             SaveCurrentState();
             
@@ -83,6 +85,8 @@ namespace Game.Preview
         {
             if (!isPreviewActive || isTransitioning) return;
             if (!ValidateComponents()) return;
+            
+            if (perspectiveProjectionManager && perspectiveProjectionManager.IsSwitching) return;
 
             if (transitionCoroutine != null)
             {
@@ -235,7 +239,7 @@ namespace Game.Preview
                 CreatePlanePreview(ref zyPlanePreview, "ZY_Preview", ProjectionAxis.FlattenX);
             }
 
-            if (playerPreviewMaterial)
+            if (playerPreviewMaterial && player)
             {
                 CreatePlayerPreviews();
             }
@@ -276,13 +280,13 @@ namespace Game.Preview
             clone.transform.localPosition = ProjectPosition(original.position, axis);
             clone.transform.localRotation = original.rotation;
             
-            // Set uniform depth size: Z=2 for XY plane, X=2 for ZY plane
+            // Set uniform depth size
             Vector3 scale = original.localScale;
-            if (axis == ProjectionAxis.FlattenZ) // XY plane
+            if (axis == ProjectionAxis.FlattenZ)
             {
                 scale.z = 2f;
             }
-            else if (axis == ProjectionAxis.FlattenX) // ZY plane
+            else if (axis == ProjectionAxis.FlattenX)
             {
                 scale.x = 2f;
             }
@@ -346,10 +350,8 @@ namespace Game.Preview
         {
             if (!player || !playerPreviewMaterial) return;
 
-            // Ensure complete cleanup of any existing player preview objects
             CleanupPlayerPreviews();
             
-            // Create single player preview at transformed coordinates
             playerXYPreview = CreatePlayerPreviewObject("Player_Preview");
         }
 
@@ -361,13 +363,12 @@ namespace Game.Preview
                 playerXYPreview = null;
             }
 
-            // Clean up any orphaned player preview objects that might exist from previous runs
-            GameObject[] existingPreviews = GameObject.FindGameObjectsWithTag("Untagged");
-            foreach (GameObject obj in existingPreviews)
+            GameObject[] allObjects = FindObjectsOfType<GameObject>(true);
+            foreach (GameObject obj in allObjects)
             {
-                if (obj.name.Contains("Player_Preview") || obj.name.Contains("Player_XY_Preview") || obj.name.Contains("Player_ZY_Preview"))
+                if (obj != null && obj.name.Contains("Player_Preview"))
                 {
-                    if (obj.transform.parent == transform)
+                    if (obj.transform.parent == transform || obj.transform.IsChildOf(transform))
                     {
                         DestroyImmediate(obj);
                     }
@@ -384,14 +385,11 @@ namespace Game.Preview
             
             CopyPlayerVisualComponents(player.gameObject, previewObj);
             
-            // Apply specific coordinate transformation: (x,y,z) = (-currentZ, currentY, -currentX)
             Vector3 currentPos = player.position;
             Vector3 previewPos = new Vector3(-currentPos.z, currentPos.y, -currentPos.x);
             previewObj.transform.position = previewPos;
             previewObj.transform.rotation = player.rotation;
-            
-            // Keep player preview at exactly the same size as the original player (no depth adjustment)
-            previewObj.transform.localScale = player.localScale;
+            previewObj.transform.localScale = Vector3.one;
 
             ApplyPreviewMaterialRecursive(previewObj, playerPreviewMaterial);
             RemoveCollidersRecursive(previewObj);
@@ -490,7 +488,7 @@ namespace Game.Preview
                 zyPlanePreview = null;
             }
 
-            // Use dedicated cleanup for player previews to ensure all are removed
+            // Use dedicated cleanup for player previews
             CleanupPlayerPreviews();
         }
 
