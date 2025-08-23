@@ -359,19 +359,18 @@ namespace Game.Preview
 
         private void CleanupPlayerPreviews()
         {
-            // Clean up the tracked preview object and all its children
             if (playerXYPreview != null)
             {
                 DestroyImmediate(playerXYPreview);
                 playerXYPreview = null;
             }
-
-            // Clean up any remaining preview objects that might be orphaned
-            Transform[] children = GetComponentsInChildren<Transform>(true);
-            for (int i = children.Length - 1; i >= 0; i--)
+            
+            // Additional safety cleanup to remove any orphaned preview objects
+            Transform[] childTransforms = GetComponentsInChildren<Transform>();
+            for (int i = childTransforms.Length - 1; i >= 0; i--)
             {
-                Transform child = children[i];
-                if (child != null && child != transform && child.name.Contains("_Preview"))
+                Transform child = childTransforms[i];
+                if (child != null && child != transform && child.name.Contains("Player_Preview"))
                 {
                     DestroyImmediate(child.gameObject);
                 }
@@ -387,7 +386,6 @@ namespace Game.Preview
             
             CopyPlayerVisualComponents(player.gameObject, previewObj);
             
-            // Calculate the preview position
             Vector3 currentPos = player.position;
             Vector3 previewPos = new Vector3(-currentPos.z, currentPos.y, -currentPos.x);
             previewObj.transform.position = previewPos;
@@ -430,8 +428,7 @@ namespace Game.Preview
                 
                 if (childRenderer || childFilter)
                 {
-                    // Fix: Ensure child preview objects also have identifiable names for cleanup
-                    GameObject childCopy = new GameObject(child.name + "_Preview");
+                    GameObject childCopy = new GameObject(child.name);
                     childCopy.transform.SetParent(target.transform);
                     childCopy.transform.localPosition = child.localPosition;
                     childCopy.transform.localRotation = child.localRotation;
@@ -505,20 +502,5 @@ namespace Game.Preview
 
         public bool IsPreviewActive => isPreviewActive;
         public bool IsTransitioning => isTransitioning;
-        
-        [ContextMenu("Force Cleanup Previews")]
-        public void ForceCleanup()
-        {
-            if (transitionCoroutine != null)
-            {
-                StopCoroutine(transitionCoroutine);
-                transitionCoroutine = null;
-            }
-            
-            DestroyPreviewOverlays();
-            
-            isPreviewActive = false;
-            isTransitioning = false;
-        }
     }
 }
