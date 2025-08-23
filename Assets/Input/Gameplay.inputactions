@@ -1,4 +1,5 @@
 {
+    "version": 1,
     "name": "Gameplay",
     "maps": [
         {
@@ -122,6 +123,17 @@
                 },
                 {
                     "name": "",
+                    "id": "90a4cdb6-f2ab-4bd5-9ab0-28a0f731ddd3",
+                    "path": "<Gamepad>/buttonSouth",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Jump",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
                     "id": "7c3aab46-0938-40cb-a9fc-215217ce8fbd",
                     "path": "<Keyboard>/space",
                     "interactions": "",
@@ -178,7 +190,29 @@
                 {
                     "name": "",
                     "id": "a4b6c7d8-e9f0-1a2b-3c4d-5e6f7a8b9c0d",
-                    "path": "<Keyboard>/v",
+                    "path": "<Keyboard>/f",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Preview3D",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "e3771822-26b1-461b-bf1e-65feb6f650c4",
+                    "path": "<Gamepad>/buttonWest",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Preview3D",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "b4b5c684-b47f-4a98-a27e-808e5ddf0941",
+                    "path": "<Gamepad>/buttonNorth",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
