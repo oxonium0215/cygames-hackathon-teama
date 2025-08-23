@@ -351,12 +351,14 @@ namespace Game.Preview
         {
             if (!player || !playerPreviewMaterial) return;
             
-            // Prevent multiple creation during transitions
             if (isTransitioning) return;
             
             CleanupPlayerPreviews();
             
-            playerXYPreview = CreatePlayerPreviewObject("Player_Preview");
+            if (playerXYPreview == null)
+            {
+                playerXYPreview = CreatePlayerPreviewObject("Player_Preview");
+            }
         }
 
         private void CleanupPlayerPreviews()
@@ -367,14 +369,12 @@ namespace Game.Preview
                 playerXYPreview = null;
             }
             
-            // Additional safety cleanup to remove any orphaned preview objects
-            Transform[] childTransforms = GetComponentsInChildren<Transform>();
-            for (int i = childTransforms.Length - 1; i >= 0; i--)
+            GameObject[] allGameObjects = FindObjectsOfType<GameObject>(true);
+            foreach (GameObject obj in allGameObjects)
             {
-                Transform child = childTransforms[i];
-                if (child != null && child != transform && child.name.Contains("Player_Preview"))
+                if (obj != null && obj.name.Contains("Player_Preview"))
                 {
-                    DestroyImmediate(child.gameObject);
+                    DestroyImmediate(obj);
                 }
             }
         }
@@ -402,13 +402,6 @@ namespace Game.Preview
 
         private void CopyPlayerVisualComponents(GameObject source, GameObject target)
         {
-            CopyPlayerVisualComponentsRecursive(source, target, 0, 10);
-        }
-
-        private void CopyPlayerVisualComponentsRecursive(GameObject source, GameObject target, int currentDepth, int maxDepth)
-        {
-            if (currentDepth >= maxDepth) return;
-
             MeshRenderer sourceMeshRenderer = source.GetComponent<MeshRenderer>();
             MeshFilter sourceMeshFilter = source.GetComponent<MeshFilter>();
             
@@ -420,29 +413,11 @@ namespace Game.Preview
                 targetMeshFilter.mesh = sourceMeshFilter.mesh;
                 targetMeshRenderer.materials = sourceMeshRenderer.materials;
             }
-
-            foreach (Transform child in source.transform)
-            {
-                if (child == null) continue;
-
-                GameObject childCopy = new GameObject(child.name);
-                childCopy.transform.SetParent(target.transform);
-                childCopy.transform.localPosition = child.localPosition;
-                childCopy.transform.localRotation = child.localRotation;
-                childCopy.transform.localScale = child.localScale;
-                
-                CopyPlayerVisualComponentsRecursive(child.gameObject, childCopy, currentDepth + 1, maxDepth);
-            }
         }
 
         private void ApplyPreviewMaterialRecursive(GameObject obj, Material previewMat)
         {
-            ApplyPreviewMaterialRecursiveInternal(obj, previewMat, 0, 15);
-        }
-
-        private void ApplyPreviewMaterialRecursiveInternal(GameObject obj, Material previewMat, int currentDepth, int maxDepth)
-        {
-            if (!previewMat || currentDepth >= maxDepth) return;
+            if (!previewMat) return;
             
             Renderer renderer = obj.GetComponent<Renderer>();
             if (renderer)
@@ -454,20 +429,14 @@ namespace Game.Preview
                 }
                 renderer.materials = materials;
             }
-
-            foreach (Transform child in obj.transform)
-            {
-                if (child == null) continue;
-                ApplyPreviewMaterialRecursiveInternal(child.gameObject, previewMat, currentDepth + 1, maxDepth);
-            }
         }
 
         private void RemoveCollidersRecursive(GameObject obj)
         {
-            Collider[] colliders = obj.GetComponentsInChildren<Collider>();
-            for (int i = colliders.Length - 1; i >= 0; i--)
+            Collider collider = obj.GetComponent<Collider>();
+            if (collider != null)
             {
-                DestroyImmediate(colliders[i]);
+                DestroyImmediate(collider);
             }
         }
 
