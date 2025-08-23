@@ -6,10 +6,6 @@ using Game.Projection;
 
 namespace Game.Preview
 {
-    /// <summary>
-    /// Manages 3D stage preview functionality, including camera transitions,
-    /// terrain restoration, and player physics control.
-    /// </summary>
     public class StagePreviewManager : MonoBehaviour
     {
         [Header("Camera Settings")]
@@ -54,7 +50,6 @@ namespace Game.Preview
 
         private void Awake()
         {
-            // Initialize components if not assigned
             if (!mainCamera) mainCamera = Camera.main;
             if (!cameraTransform && mainCamera) cameraTransform = mainCamera.transform;
             if (!player) player = GameObject.FindWithTag("Player")?.transform;
@@ -66,10 +61,8 @@ namespace Game.Preview
 
         private void OnDestroy()
         {
-            // Clean up any remaining preview objects
             DestroyPreviewOverlays();
             
-            // Stop any running coroutines
             if (transitionCoroutine != null)
             {
                 StopCoroutine(transitionCoroutine);
@@ -106,23 +99,7 @@ namespace Game.Preview
 
         private bool ValidateComponents()
         {
-            if (!mainCamera || !cameraTransform)
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                Debug.LogWarning("[StagePreview] Main camera or camera transform not found.");
-#endif
-                return false;
-            }
-
-            if (!geometryProjector)
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                Debug.LogWarning("[StagePreview] GeometryProjector not found.");
-#endif
-                return false;
-            }
-
-            return true;
+            return mainCamera && cameraTransform && geometryProjector;
         }
 
         private void SaveCurrentState()
@@ -153,22 +130,22 @@ namespace Game.Preview
         {
             isTransitioning = true;
 
-            // Stop player physics
             StopPlayerPhysics();
 
-            // Clear terrain projections
             if (geometryProjector)
             {
                 geometryProjector.ClearProjected();
             }
 
-            // Calculate preview camera position - use absolute coordinates (16, player.y+10, -16)
             Vector3 targetPosition = new Vector3(16f, originalCameraPosition.y + 10f, -16f);
             if (player)
             {
                 targetPosition.y = player.position.y + 10f;
             }
 
+            // Set target camera rotation (30, -45, 0)
+            Quaternion targetRotation = Quaternion.Euler(30f, -45f, 0f);
+            
             // Smooth camera transition
             float elapsed = 0f;
             Vector3 startPos = originalCameraPosition;
@@ -184,20 +161,17 @@ namespace Game.Preview
                 float t = elapsed / transitionDuration;
                 float curveT = transitionCurve.Evaluate(t);
 
-                // Interpolate camera position and properties
                 cameraTransform.position = Vector3.Lerp(startPos, targetPosition, curveT);
-                cameraTransform.rotation = Quaternion.Slerp(startRot, Quaternion.identity, curveT);
+                cameraTransform.rotation = Quaternion.Slerp(startRot, targetRotation, curveT);
                 mainCamera.orthographicSize = Mathf.Lerp(startSize, previewCameraSize, curveT);
 
                 yield return null;
             }
 
-            // Ensure final values are set
             cameraTransform.position = targetPosition;
-            cameraTransform.rotation = Quaternion.identity;
+            cameraTransform.rotation = targetRotation;
             mainCamera.orthographicSize = previewCameraSize;
 
-            // Create preview overlays
             CreatePreviewOverlays();
 
             isPreviewActive = true;
@@ -208,10 +182,8 @@ namespace Game.Preview
         {
             isTransitioning = true;
 
-            // Destroy preview overlays
             DestroyPreviewOverlays();
 
-            // Smooth transition back to original camera state
             float elapsed = 0f;
             Vector3 startPos = cameraTransform.position;
             Quaternion startRot = cameraTransform.rotation;
@@ -223,7 +195,6 @@ namespace Game.Preview
                 float t = elapsed / transitionDuration;
                 float curveT = transitionCurve.Evaluate(t);
 
-                // Interpolate back to original state
                 cameraTransform.position = Vector3.Lerp(startPos, originalCameraPosition, curveT);
                 cameraTransform.rotation = Quaternion.Slerp(startRot, originalCameraRotation, curveT);
                 mainCamera.orthographicSize = Mathf.Lerp(startSize, originalCameraSize, curveT);
@@ -231,16 +202,12 @@ namespace Game.Preview
                 yield return null;
             }
 
-            // Ensure final values are set
             cameraTransform.position = originalCameraPosition;
             cameraTransform.rotation = originalCameraRotation;
             mainCamera.orthographicSize = originalCameraSize;
             mainCamera.orthographic = originalOrthographic;
 
-            // Restore player physics
             RestorePlayerPhysics();
-            
-            // Reproject geometry back to current view
             ReprojectGeometry();
 
             isPreviewActive = false;
@@ -257,7 +224,6 @@ namespace Game.Preview
 
             if (playerMotor)
             {
-                // Disable PlayerMotor component to prevent it from updating physics
                 playerMotor.enabled = false;
             }
         }
@@ -274,17 +240,12 @@ namespace Game.Preview
         {
             if (!geometryProjector || !geometryProjector.SourceRoot) return;
 
-            // Only create overlays if preview material is assigned
             if (previewMaterial)
             {
-                // Create XY plane preview (flatten Z)
                 CreatePlanePreview(ref xyPlanePreview, "XY_Preview", ProjectionAxis.FlattenZ);
-                
-                // Create ZY plane preview (flatten X)  
                 CreatePlanePreview(ref zyPlanePreview, "ZY_Preview", ProjectionAxis.FlattenX);
             }
 
-            // Create player position previews if player preview material is assigned
             if (playerPreviewMaterial)
             {
                 CreatePlayerPreviews();
@@ -301,11 +262,9 @@ namespace Game.Preview
             previewObject = new GameObject(name);
             previewObject.transform.SetParent(transform);
 
-            // Create a copy of geometry for preview
             Transform sourceRoot = geometryProjector.SourceRoot;
             if (sourceRoot)
             {
-                // Clone the geometry hierarchy
                 foreach (Transform child in sourceRoot)
                 {
                     CloneObjectForPreview(child, previewObject.transform, axis);
@@ -315,29 +274,20 @@ namespace Game.Preview
 
         private void CloneObjectForPreview(Transform original, Transform parent, ProjectionAxis axis)
         {
-            CloneObjectForPreviewRecursive(original, parent, axis, 0, 15); // Max depth of 15 for geometry cloning
+            CloneObjectForPreviewRecursive(original, parent, axis, 0, 15);
         }
 
         private void CloneObjectForPreviewRecursive(Transform original, Transform parent, ProjectionAxis axis, int currentDepth, int maxDepth)
         {
-            // Prevent infinite recursion
-            if (currentDepth >= maxDepth)
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                Debug.LogWarning($"[StagePreview] Maximum recursion depth reached while cloning geometry. Stopping at depth {currentDepth}.");
-#endif
-                return;
-            }
+            if (currentDepth >= maxDepth) return;
 
             GameObject clone = new GameObject(original.name + "_Preview");
             clone.transform.SetParent(parent);
 
-            // Copy transform
             clone.transform.localPosition = ProjectPosition(original.position, axis);
             clone.transform.localRotation = original.rotation;
             clone.transform.localScale = original.localScale;
 
-            // Copy mesh renderers with preview material
             MeshRenderer originalRenderer = original.GetComponent<MeshRenderer>();
             MeshFilter originalFilter = original.GetComponent<MeshFilter>();
             
@@ -350,12 +300,9 @@ namespace Game.Preview
                 cloneRenderer.material = previewMaterial;
             }
 
-            // Recursively clone children
             foreach (Transform child in original)
             {
-                // Skip null or destroyed children
                 if (child == null) continue;
-                
                 CloneObjectForPreviewRecursive(child, clone.transform, axis, currentDepth + 1, maxDepth);
             }
         }
@@ -376,40 +323,66 @@ namespace Game.Preview
             return projected;
         }
 
+        private ProjectionAxis GetCurrentProjectionAxis()
+        {
+            // Default to XY view (FlattenZ)
+            ProjectionAxis currentAxis = ProjectionAxis.FlattenZ;
+            
+            if (cameraTransform)
+            {
+                // Check camera's Y rotation to determine which view we're in
+                float yaw = cameraTransform.eulerAngles.y;
+                // Normalize yaw to 0-360 range
+                while (yaw < 0) yaw += 360;
+                while (yaw >= 360) yaw -= 360;
+                
+                // If yaw is close to -90 degrees (270), we're in view B (ZY)
+                if (Mathf.Abs(yaw - 270f) < 45f)
+                {
+                    currentAxis = ProjectionAxis.FlattenX; // ZY projection
+                }
+            }
+
+            return currentAxis;
+        }
+
         private void CreatePlayerPreviews()
         {
             if (!player || !playerPreviewMaterial) return;
 
-            // Create XY plane player preview
-            if (playerXYPreview != null) DestroyImmediate(playerXYPreview);
-            playerXYPreview = CreatePlayerPreviewObject("Player_XY_Preview", ProjectionAxis.FlattenZ);
-
-            // Create ZY plane player preview
-            if (playerZYPreview != null) DestroyImmediate(playerZYPreview);  
-            playerZYPreview = CreatePlayerPreviewObject("Player_ZY_Preview", ProjectionAxis.FlattenX);
+            // Determine current projection axis based on camera orientation
+            ProjectionAxis currentAxis = GetCurrentProjectionAxis();
+            
+            // Create preview for the OPPOSITE plane only
+            if (currentAxis == ProjectionAxis.FlattenZ) // Currently in XY view
+            {
+                // Show where player would be in ZY view
+                if (playerZYPreview != null) DestroyImmediate(playerZYPreview);  
+                playerZYPreview = CreatePlayerPreviewObject("Player_ZY_Preview", ProjectionAxis.FlattenX);
+            }
+            else // Currently in ZY view  
+            {
+                // Show where player would be in XY view
+                if (playerXYPreview != null) DestroyImmediate(playerXYPreview);
+                playerXYPreview = CreatePlayerPreviewObject("Player_XY_Preview", ProjectionAxis.FlattenZ);
+            }
         }
 
         private GameObject CreatePlayerPreviewObject(string name, ProjectionAxis axis)
         {
             if (!player) return null;
 
-            // Create a copy of the player GameObject
             GameObject previewObj = new GameObject(name);
             previewObj.transform.SetParent(transform);
             
-            // Copy all visual components from the player
             CopyPlayerVisualComponents(player.gameObject, previewObj);
             
-            // Position the preview
             Vector3 previewPos = ProjectPosition(player.position, axis);
             previewObj.transform.position = previewPos;
             previewObj.transform.rotation = player.rotation;
             previewObj.transform.localScale = player.localScale;
 
-            // Apply preview material to all renderers
             ApplyPreviewMaterialRecursive(previewObj, playerPreviewMaterial);
-            
-            // Remove all colliders since this is just for visualization
             RemoveCollidersRecursive(previewObj);
 
             return previewObj;
@@ -417,21 +390,13 @@ namespace Game.Preview
 
         private void CopyPlayerVisualComponents(GameObject source, GameObject target)
         {
-            CopyPlayerVisualComponentsRecursive(source, target, 0, 10); // Max depth of 10 to prevent stack overflow
+            CopyPlayerVisualComponentsRecursive(source, target, 0, 10);
         }
 
         private void CopyPlayerVisualComponentsRecursive(GameObject source, GameObject target, int currentDepth, int maxDepth)
         {
-            // Prevent infinite recursion
-            if (currentDepth >= maxDepth)
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                Debug.LogWarning($"[StagePreview] Maximum recursion depth reached while copying player visual components. Stopping at depth {currentDepth}.");
-#endif
-                return;
-            }
+            if (currentDepth >= maxDepth) return;
 
-            // Copy MeshRenderer and MeshFilter if they exist
             MeshRenderer sourceMeshRenderer = source.GetComponent<MeshRenderer>();
             MeshFilter sourceMeshFilter = source.GetComponent<MeshFilter>();
             
@@ -444,10 +409,8 @@ namespace Game.Preview
                 targetMeshRenderer.materials = sourceMeshRenderer.materials;
             }
 
-            // Recursively copy child objects with visual components
             foreach (Transform child in source.transform)
             {
-                // Skip null or destroyed children
                 if (child == null) continue;
 
                 MeshRenderer childRenderer = child.GetComponent<MeshRenderer>();
@@ -468,21 +431,12 @@ namespace Game.Preview
 
         private void ApplyPreviewMaterialRecursive(GameObject obj, Material previewMat)
         {
-            ApplyPreviewMaterialRecursiveInternal(obj, previewMat, 0, 15); // Max depth of 15
+            ApplyPreviewMaterialRecursiveInternal(obj, previewMat, 0, 15);
         }
 
         private void ApplyPreviewMaterialRecursiveInternal(GameObject obj, Material previewMat, int currentDepth, int maxDepth)
         {
-            if (!previewMat) return;
-            
-            // Prevent infinite recursion
-            if (currentDepth >= maxDepth)
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                Debug.LogWarning($"[StagePreview] Maximum recursion depth reached while applying materials. Stopping at depth {currentDepth}.");
-#endif
-                return;
-            }
+            if (!previewMat || currentDepth >= maxDepth) return;
             
             Renderer renderer = obj.GetComponent<Renderer>();
             if (renderer)
@@ -497,9 +451,7 @@ namespace Game.Preview
 
             foreach (Transform child in obj.transform)
             {
-                // Skip null or destroyed children
                 if (child == null) continue;
-                
                 ApplyPreviewMaterialRecursiveInternal(child.gameObject, previewMat, currentDepth + 1, maxDepth);
             }
         }
@@ -544,26 +496,7 @@ namespace Game.Preview
         {
             if (!geometryProjector) return;
 
-            // Determine current projection axis based on camera orientation
-            // If camera is looking along X-axis (viewB), use FlattenX (ZY projection)  
-            // If camera is looking along Z-axis (viewA), use FlattenZ (XY projection)
-            ProjectionAxis currentAxis = ProjectionAxis.FlattenZ; // Default XY
-            
-            if (cameraTransform)
-            {
-                // Check camera's Y rotation to determine which view we're in
-                float yaw = cameraTransform.eulerAngles.y;
-                // Normalize yaw to 0-360 range
-                while (yaw < 0) yaw += 360;
-                while (yaw >= 360) yaw -= 360;
-                
-                // If yaw is close to -90 degrees (270), we're in view B (ZY)
-                if (Mathf.Abs(yaw - 270f) < 45f)
-                {
-                    currentAxis = ProjectionAxis.FlattenX; // ZY projection
-                }
-            }
-
+            ProjectionAxis currentAxis = GetCurrentProjectionAxis();
             geometryProjector.Rebuild(currentAxis);
         }
 
