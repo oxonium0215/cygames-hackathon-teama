@@ -26,23 +26,19 @@ namespace Game.Preview
         [SerializeField] private Material previewMaterial;
         [SerializeField] private Material playerPreviewMaterial;
 
-        // Camera state storage
         private Vector3 originalCameraPosition;
         private Quaternion originalCameraRotation;
         private float originalCameraSize;
         private bool originalOrthographic;
         
-        // Player state storage
         private Vector3 originalPlayerVelocity;
         private Vector3 originalPlayerAngularVelocity;
         private bool wasPlayerMotorEnabled;
 
-        // Preview state
         private bool isPreviewActive = false;
         private bool isTransitioning = false;
         private Coroutine transitionCoroutine;
 
-        // Preview overlay objects
         private GameObject xyPlanePreview;
         private GameObject zyPlanePreview;
         private GameObject playerXYPreview;
@@ -106,20 +102,17 @@ namespace Game.Preview
         {
             if (!cameraTransform || !mainCamera) return;
 
-            // Save camera state
             originalCameraPosition = cameraTransform.position;
             originalCameraRotation = cameraTransform.rotation;
             originalCameraSize = mainCamera.orthographicSize;
             originalOrthographic = mainCamera.orthographic;
 
-            // Save player physics state
             if (playerRigidbody)
             {
                 originalPlayerVelocity = playerRigidbody.linearVelocity;
                 originalPlayerAngularVelocity = playerRigidbody.angularVelocity;
             }
             
-            // Save PlayerMotor state
             if (playerMotor)
             {
                 wasPlayerMotorEnabled = playerMotor.enabled;
@@ -143,16 +136,13 @@ namespace Game.Preview
                 targetPosition.y = player.position.y + 10f;
             }
 
-            // Set target camera rotation (30, -45, 0)
             Quaternion targetRotation = Quaternion.Euler(30f, -45f, 0f);
             
-            // Smooth camera transition
             float elapsed = 0f;
             Vector3 startPos = originalCameraPosition;
             Quaternion startRot = originalCameraRotation;
             float startSize = originalCameraSize;
 
-            // Set camera to orthographic for better preview view
             mainCamera.orthographic = true;
 
             while (elapsed < transitionDuration)
@@ -286,7 +276,18 @@ namespace Game.Preview
 
             clone.transform.localPosition = ProjectPosition(original.position, axis);
             clone.transform.localRotation = original.rotation;
-            clone.transform.localScale = original.localScale;
+            
+            // Set uniform depth size: Z=2 for XY plane, X=2 for ZY plane
+            Vector3 scale = original.localScale;
+            if (axis == ProjectionAxis.FlattenZ) // XY plane
+            {
+                scale.z = 2f;
+            }
+            else if (axis == ProjectionAxis.FlattenX) // ZY plane
+            {
+                scale.x = 2f;
+            }
+            clone.transform.localScale = scale;
 
             MeshRenderer originalRenderer = original.GetComponent<MeshRenderer>();
             MeshFilter originalFilter = original.GetComponent<MeshFilter>();
@@ -325,21 +326,17 @@ namespace Game.Preview
 
         private ProjectionAxis GetCurrentProjectionAxis()
         {
-            // Default to XY view (FlattenZ)
             ProjectionAxis currentAxis = ProjectionAxis.FlattenZ;
             
             if (cameraTransform)
             {
-                // Check camera's Y rotation to determine which view we're in
                 float yaw = cameraTransform.eulerAngles.y;
-                // Normalize yaw to 0-360 range
                 while (yaw < 0) yaw += 360;
                 while (yaw >= 360) yaw -= 360;
                 
-                // If yaw is close to -90 degrees (270), we're in view B (ZY)
                 if (Mathf.Abs(yaw - 270f) < 45f)
                 {
-                    currentAxis = ProjectionAxis.FlattenX; // ZY projection
+                    currentAxis = ProjectionAxis.FlattenX;
                 }
             }
 
@@ -350,19 +347,15 @@ namespace Game.Preview
         {
             if (!player || !playerPreviewMaterial) return;
 
-            // Determine current projection axis based on camera orientation
             ProjectionAxis currentAxis = GetCurrentProjectionAxis();
             
-            // Create preview for the OPPOSITE plane only
-            if (currentAxis == ProjectionAxis.FlattenZ) // Currently in XY view
+            if (currentAxis == ProjectionAxis.FlattenZ)
             {
-                // Show where player would be in ZY view
                 if (playerZYPreview != null) DestroyImmediate(playerZYPreview);  
                 playerZYPreview = CreatePlayerPreviewObject("Player_ZY_Preview", ProjectionAxis.FlattenX);
             }
-            else // Currently in ZY view  
+            else
             {
-                // Show where player would be in XY view
                 if (playerXYPreview != null) DestroyImmediate(playerXYPreview);
                 playerXYPreview = CreatePlayerPreviewObject("Player_XY_Preview", ProjectionAxis.FlattenZ);
             }
@@ -377,10 +370,23 @@ namespace Game.Preview
             
             CopyPlayerVisualComponents(player.gameObject, previewObj);
             
-            Vector3 previewPos = ProjectPosition(player.position, axis);
+            // Apply specific coordinate transformation: (x,y,z) = (-currentZ, currentY, -currentX)
+            Vector3 currentPos = player.position;
+            Vector3 previewPos = new Vector3(-currentPos.z, currentPos.y, -currentPos.x);
             previewObj.transform.position = previewPos;
             previewObj.transform.rotation = player.rotation;
-            previewObj.transform.localScale = player.localScale;
+            
+            // Set uniform depth size: Z=2 for XY plane, X=2 for ZY plane
+            Vector3 scale = player.localScale;
+            if (axis == ProjectionAxis.FlattenZ) // XY plane
+            {
+                scale.z = 2f;
+            }
+            else if (axis == ProjectionAxis.FlattenX) // ZY plane
+            {
+                scale.x = 2f;
+            }
+            previewObj.transform.localScale = scale;
 
             ApplyPreviewMaterialRecursive(previewObj, playerPreviewMaterial);
             RemoveCollidersRecursive(previewObj);
