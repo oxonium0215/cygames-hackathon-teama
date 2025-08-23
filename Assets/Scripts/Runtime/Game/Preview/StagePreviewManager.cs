@@ -40,9 +40,9 @@ namespace Game.Preview
         private bool isTransitioning = false;
         private Coroutine transitionCoroutine;
 
-        private GameObject xyPlanePreview;
-        private GameObject zyPlanePreview;
-        private GameObject playerXYPreview;
+        private GameObject flattenZPlanePreview;
+        private GameObject flattenXPlanePreview;
+        private GameObject playerPreview;
 
         private void Awake()
         {
@@ -239,8 +239,8 @@ namespace Game.Preview
 
             if (previewMaterial)
             {
-                CreatePlanePreview(ref xyPlanePreview, "XY_Preview", ProjectionAxis.FlattenZ);
-                CreatePlanePreview(ref zyPlanePreview, "ZY_Preview", ProjectionAxis.FlattenX);
+                CreatePlanePreview(ref flattenZPlanePreview, "FlattenZ_Preview", ProjectionAxis.FlattenZ);
+                CreatePlanePreview(ref flattenXPlanePreview, "FlattenX_Preview", ProjectionAxis.FlattenX);
             }
 
             if (playerPreviewMaterial && player)
@@ -363,15 +363,15 @@ namespace Game.Preview
 
             CleanupPlayerPreviews();
             
-            playerXYPreview = CreatePlayerPreviewObject("Player_Preview");
+            playerPreview = CreatePlayerPreviewObject("Player_Preview");
         }
 
         private void CleanupPlayerPreviews()
         {
-            if (playerXYPreview != null)
+            if (playerPreview != null)
             {
-                DestroyImmediate(playerXYPreview);
-                playerXYPreview = null;
+                DestroyImmediate(playerPreview);
+                playerPreview = null;
             }
 
             // Check both under Level and under this transform for cleanup
@@ -408,7 +408,7 @@ namespace Game.Preview
             Vector3 previewPos = new Vector3(-currentPos.z, currentPos.y, -currentPos.x);
             previewObj.transform.position = previewPos;
             previewObj.transform.rotation = player.rotation;
-            previewObj.transform.localScale = Vector3.one;
+            previewObj.transform.localScale = player.localScale;
 
             ApplyPreviewMaterialRecursive(previewObj, playerPreviewMaterial);
             RemoveCollidersRecursive(previewObj);
@@ -501,16 +501,16 @@ namespace Game.Preview
 
         private void DestroyPreviewOverlays()
         {
-            if (xyPlanePreview != null)
+            if (flattenZPlanePreview != null)
             {
-                DestroyImmediate(xyPlanePreview);
-                xyPlanePreview = null;
+                DestroyImmediate(flattenZPlanePreview);
+                flattenZPlanePreview = null;
             }
 
-            if (zyPlanePreview != null)
+            if (flattenXPlanePreview != null)
             {
-                DestroyImmediate(zyPlanePreview);
-                zyPlanePreview = null;
+                DestroyImmediate(flattenXPlanePreview);
+                flattenXPlanePreview = null;
             }
 
             // Use dedicated cleanup for player previews
