@@ -315,6 +315,20 @@ namespace Game.Preview
 
         private void CloneObjectForPreview(Transform original, Transform parent, ProjectionAxis axis)
         {
+            CloneObjectForPreviewRecursive(original, parent, axis, 0, 15); // Max depth of 15 for geometry cloning
+        }
+
+        private void CloneObjectForPreviewRecursive(Transform original, Transform parent, ProjectionAxis axis, int currentDepth, int maxDepth)
+        {
+            // Prevent infinite recursion
+            if (currentDepth >= maxDepth)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.LogWarning($"[StagePreview] Maximum recursion depth reached while cloning geometry. Stopping at depth {currentDepth}.");
+#endif
+                return;
+            }
+
             GameObject clone = new GameObject(original.name + "_Preview");
             clone.transform.SetParent(parent);
 
@@ -339,7 +353,10 @@ namespace Game.Preview
             // Recursively clone children
             foreach (Transform child in original)
             {
-                CloneObjectForPreview(child, clone.transform, axis);
+                // Skip null or destroyed children
+                if (child == null) continue;
+                
+                CloneObjectForPreviewRecursive(child, clone.transform, axis, currentDepth + 1, maxDepth);
             }
         }
 
@@ -400,6 +417,20 @@ namespace Game.Preview
 
         private void CopyPlayerVisualComponents(GameObject source, GameObject target)
         {
+            CopyPlayerVisualComponentsRecursive(source, target, 0, 10); // Max depth of 10 to prevent stack overflow
+        }
+
+        private void CopyPlayerVisualComponentsRecursive(GameObject source, GameObject target, int currentDepth, int maxDepth)
+        {
+            // Prevent infinite recursion
+            if (currentDepth >= maxDepth)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.LogWarning($"[StagePreview] Maximum recursion depth reached while copying player visual components. Stopping at depth {currentDepth}.");
+#endif
+                return;
+            }
+
             // Copy MeshRenderer and MeshFilter if they exist
             MeshRenderer sourceMeshRenderer = source.GetComponent<MeshRenderer>();
             MeshFilter sourceMeshFilter = source.GetComponent<MeshFilter>();
@@ -416,6 +447,9 @@ namespace Game.Preview
             // Recursively copy child objects with visual components
             foreach (Transform child in source.transform)
             {
+                // Skip null or destroyed children
+                if (child == null) continue;
+
                 MeshRenderer childRenderer = child.GetComponent<MeshRenderer>();
                 MeshFilter childFilter = child.GetComponent<MeshFilter>();
                 
@@ -427,14 +461,28 @@ namespace Game.Preview
                     childCopy.transform.localRotation = child.localRotation;
                     childCopy.transform.localScale = child.localScale;
                     
-                    CopyPlayerVisualComponents(child.gameObject, childCopy);
+                    CopyPlayerVisualComponentsRecursive(child.gameObject, childCopy, currentDepth + 1, maxDepth);
                 }
             }
         }
 
         private void ApplyPreviewMaterialRecursive(GameObject obj, Material previewMat)
         {
+            ApplyPreviewMaterialRecursiveInternal(obj, previewMat, 0, 15); // Max depth of 15
+        }
+
+        private void ApplyPreviewMaterialRecursiveInternal(GameObject obj, Material previewMat, int currentDepth, int maxDepth)
+        {
             if (!previewMat) return;
+            
+            // Prevent infinite recursion
+            if (currentDepth >= maxDepth)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.LogWarning($"[StagePreview] Maximum recursion depth reached while applying materials. Stopping at depth {currentDepth}.");
+#endif
+                return;
+            }
             
             Renderer renderer = obj.GetComponent<Renderer>();
             if (renderer)
@@ -449,7 +497,10 @@ namespace Game.Preview
 
             foreach (Transform child in obj.transform)
             {
-                ApplyPreviewMaterialRecursive(child.gameObject, previewMat);
+                // Skip null or destroyed children
+                if (child == null) continue;
+                
+                ApplyPreviewMaterialRecursiveInternal(child.gameObject, previewMat, currentDepth + 1, maxDepth);
             }
         }
 
