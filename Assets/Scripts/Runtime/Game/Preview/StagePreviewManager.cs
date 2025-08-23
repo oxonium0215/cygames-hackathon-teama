@@ -42,7 +42,6 @@ namespace Game.Preview
         private GameObject xyPlanePreview;
         private GameObject zyPlanePreview;
         private GameObject playerXYPreview;
-        private GameObject playerZYPreview;
 
         private void Awake()
         {
@@ -347,21 +346,12 @@ namespace Game.Preview
         {
             if (!player || !playerPreviewMaterial) return;
 
-            ProjectionAxis currentAxis = GetCurrentProjectionAxis();
+            if (playerXYPreview != null) DestroyImmediate(playerXYPreview);
             
-            if (currentAxis == ProjectionAxis.FlattenZ)
-            {
-                if (playerZYPreview != null) DestroyImmediate(playerZYPreview);  
-                playerZYPreview = CreatePlayerPreviewObject("Player_ZY_Preview", ProjectionAxis.FlattenX);
-            }
-            else
-            {
-                if (playerXYPreview != null) DestroyImmediate(playerXYPreview);
-                playerXYPreview = CreatePlayerPreviewObject("Player_XY_Preview", ProjectionAxis.FlattenZ);
-            }
+            playerXYPreview = CreatePlayerPreviewObject("Player_Preview");
         }
 
-        private GameObject CreatePlayerPreviewObject(string name, ProjectionAxis axis)
+        private GameObject CreatePlayerPreviewObject(string name)
         {
             if (!player) return null;
 
@@ -370,23 +360,11 @@ namespace Game.Preview
             
             CopyPlayerVisualComponents(player.gameObject, previewObj);
             
-            // Apply specific coordinate transformation: (x,y,z) = (-currentZ, currentY, -currentX)
             Vector3 currentPos = player.position;
             Vector3 previewPos = new Vector3(-currentPos.z, currentPos.y, -currentPos.x);
             previewObj.transform.position = previewPos;
             previewObj.transform.rotation = player.rotation;
-            
-            // Set uniform depth size: Z=2 for XY plane, X=2 for ZY plane
-            Vector3 scale = player.localScale;
-            if (axis == ProjectionAxis.FlattenZ) // XY plane
-            {
-                scale.z = 2f;
-            }
-            else if (axis == ProjectionAxis.FlattenX) // ZY plane
-            {
-                scale.x = 2f;
-            }
-            previewObj.transform.localScale = scale;
+            previewObj.transform.localScale = player.localScale;
 
             ApplyPreviewMaterialRecursive(previewObj, playerPreviewMaterial);
             RemoveCollidersRecursive(previewObj);
@@ -489,12 +467,6 @@ namespace Game.Preview
             {
                 DestroyImmediate(playerXYPreview);
                 playerXYPreview = null;
-            }
-
-            if (playerZYPreview != null)
-            {
-                DestroyImmediate(playerZYPreview);
-                playerZYPreview = null;
             }
         }
 
