@@ -58,10 +58,10 @@ namespace Game.Preview
             if (!mainCamera) mainCamera = Camera.main;
             if (!cameraTransform && mainCamera) cameraTransform = mainCamera.transform;
             if (!player) player = GameObject.FindWithTag("Player")?.transform;
-            if (!geometryProjector) geometryProjector = FindObjectOfType<GeometryProjector>();
+            if (!geometryProjector) geometryProjector = FindFirstObjectByType<GeometryProjector>();
             if (!playerMotor && player) playerMotor = player.GetComponent<PlayerMotor>();
             if (!playerRigidbody && player) playerRigidbody = player.GetComponent<Rigidbody>();
-            if (!perspectiveProjectionManager) perspectiveProjectionManager = FindObjectOfType<PerspectiveProjectionManager>();
+            if (!perspectiveProjectionManager) perspectiveProjectionManager = FindFirstObjectByType<PerspectiveProjectionManager>();
         }
 
         private void OnDestroy()
