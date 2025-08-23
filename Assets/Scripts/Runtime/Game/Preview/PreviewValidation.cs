@@ -44,6 +44,27 @@ namespace Game.Preview
             // Wait a frame and then validate
             Invoke(nameof(DoValidation), 1f);
         }
+        
+        [ContextMenu("Test Race Condition")]
+        public void TestRaceCondition()
+        {
+            if (!previewManager || !player)
+            {
+                Debug.LogError("Missing references for validation");
+                return;
+            }
+
+            Debug.Log("Testing race condition by calling StartPreview multiple times rapidly...");
+            
+            // Try to trigger the race condition by calling StartPreview multiple times in rapid succession
+            previewManager.StartPreview();
+            previewManager.StartPreview(); // This should be ignored
+            previewManager.StartPreview(); // This should be ignored
+            previewManager.StartPreview(); // This should be ignored
+
+            // Wait and validate
+            Invoke(nameof(DoValidation), 1f);
+        }
 
         private void DoValidation()
         {

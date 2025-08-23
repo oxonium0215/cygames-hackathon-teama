@@ -56,12 +56,18 @@ namespace Game.Preview
 
         private void OnDestroy()
         {
+            // Clean up all previews and stop any running transitions
             DestroyPreviewOverlays();
             
             if (transitionCoroutine != null)
             {
                 StopCoroutine(transitionCoroutine);
+                transitionCoroutine = null;
             }
+            
+            // Reset state flags
+            isPreviewActive = false;
+            isTransitioning = false;
         }
 
         public void StartPreview()
@@ -70,6 +76,9 @@ namespace Game.Preview
             if (!ValidateComponents()) return;
             
             if (perspectiveProjectionManager && perspectiveProjectionManager.IsSwitching) return;
+
+            // Set transitioning state immediately to prevent race conditions
+            isTransitioning = true;
 
             // Ensure any existing previews are cleaned up before starting
             CleanupPlayerPreviews();
@@ -90,6 +99,9 @@ namespace Game.Preview
             if (!ValidateComponents()) return;
             
             if (perspectiveProjectionManager && perspectiveProjectionManager.IsSwitching) return;
+
+            // Set transitioning state immediately to prevent race conditions
+            isTransitioning = true;
 
             if (transitionCoroutine != null)
             {
@@ -127,7 +139,7 @@ namespace Game.Preview
 
         private IEnumerator TransitionToPreview()
         {
-            isTransitioning = true;
+            // isTransitioning is already set to true in StartPreview()
 
             StopPlayerPhysics();
 
@@ -172,11 +184,14 @@ namespace Game.Preview
 
             isPreviewActive = true;
             isTransitioning = false;
+            
+            // Safety cleanup in case the coroutine reference is stale
+            transitionCoroutine = null;
         }
 
         private IEnumerator TransitionFromPreview()
         {
-            isTransitioning = true;
+            // isTransitioning is already set to true in EndPreview()
 
             DestroyPreviewOverlays();
 
@@ -208,6 +223,9 @@ namespace Game.Preview
 
             isPreviewActive = false;
             isTransitioning = false;
+            
+            // Safety cleanup in case the coroutine reference is stale
+            transitionCoroutine = null;
         }
 
         private void StopPlayerPhysics()
@@ -515,5 +533,26 @@ namespace Game.Preview
 
         public bool IsPreviewActive => isPreviewActive;
         public bool IsTransitioning => isTransitioning;
+        
+        /// <summary>
+        /// Force cleanup of all preview objects and reset state. 
+        /// Use this as a safety measure if previews get stuck.
+        /// </summary>
+        [ContextMenu("Force Cleanup Previews")]
+        public void ForceCleanup()
+        {
+            if (transitionCoroutine != null)
+            {
+                StopCoroutine(transitionCoroutine);
+                transitionCoroutine = null;
+            }
+            
+            DestroyPreviewOverlays();
+            
+            isPreviewActive = false;
+            isTransitioning = false;
+            
+            Debug.Log("Forced preview cleanup completed");
+        }
     }
 }
