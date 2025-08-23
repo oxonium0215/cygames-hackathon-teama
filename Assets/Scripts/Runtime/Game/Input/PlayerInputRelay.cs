@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using Game.Player;
 using Game.Projection;
+using Game.Preview;
 
 namespace Game.Input
 {
@@ -12,6 +13,8 @@ namespace Game.Input
         [SerializeField] private PlayerMotor motor;
         [Tooltip("PerspectiveProjectionManager used to check if perspective switching is active.")]
         [SerializeField] private PerspectiveProjectionManager perspective;
+        [Tooltip("StagePreviewManager for 3D preview functionality.")]
+        [SerializeField] private StagePreviewManager stagePreview;
 
         private UnityPlayerInput playerInput;
         private bool wasInputSuppressed;
@@ -71,6 +74,20 @@ namespace Game.Input
         {
             if (ctx.performed) 
                 perspective?.TogglePerspective();
+        }
+
+        public void OnPreview3D(InputAction.CallbackContext ctx)
+        {
+            if (!stagePreview) return;
+
+            if (ctx.performed)
+            {
+                stagePreview.StartPreview();
+            }
+            else if (ctx.canceled)
+            {
+                stagePreview.EndPreview();
+            }
         }
     }
 }
