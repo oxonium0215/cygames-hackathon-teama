@@ -352,6 +352,9 @@ namespace Game.Preview
         {
             if (!player || !playerPreviewMaterial) return;
             
+            // Prevent multiple creation during transitions
+            if (isTransitioning) return;
+            
             CleanupPlayerPreviews();
             
             playerXYPreview = CreatePlayerPreviewObject("Player_Preview");
@@ -423,19 +426,13 @@ namespace Game.Preview
             {
                 if (child == null) continue;
 
-                MeshRenderer childRenderer = child.GetComponent<MeshRenderer>();
-                MeshFilter childFilter = child.GetComponent<MeshFilter>();
+                GameObject childCopy = new GameObject(child.name);
+                childCopy.transform.SetParent(target.transform);
+                childCopy.transform.localPosition = child.localPosition;
+                childCopy.transform.localRotation = child.localRotation;
+                childCopy.transform.localScale = child.localScale;
                 
-                if (childRenderer || childFilter)
-                {
-                    GameObject childCopy = new GameObject(child.name);
-                    childCopy.transform.SetParent(target.transform);
-                    childCopy.transform.localPosition = child.localPosition;
-                    childCopy.transform.localRotation = child.localRotation;
-                    childCopy.transform.localScale = child.localScale;
-                    
-                    CopyPlayerVisualComponentsRecursive(child.gameObject, childCopy, currentDepth + 1, maxDepth);
-                }
+                CopyPlayerVisualComponentsRecursive(child.gameObject, childCopy, currentDepth + 1, maxDepth);
             }
         }
 
