@@ -70,19 +70,34 @@ namespace Game.Preview
         {
             if (!previewManager) return;
 
-            // Count preview objects
-            GameObject[] allPreviews = GameObject.FindObjectsOfType<GameObject>();
-            previewCount = 0;
+            // Count preview objects using different methods
+            GameObject[] allObjects = GameObject.FindObjectsOfType<GameObject>();
+            int globalPreviewCount = 0;
             GameObject foundPreview = null;
 
-            foreach (var obj in allPreviews)
+            foreach (var obj in allObjects)
             {
                 if (obj.name.Contains("Player_Preview"))
                 {
-                    previewCount++;
+                    globalPreviewCount++;
                     foundPreview = obj;
+                    Debug.Log($"Found preview: {obj.name} at {obj.transform.position}");
                 }
             }
+            
+            // Also check within the preview manager's children
+            Transform[] children = previewManager.GetComponentsInChildren<Transform>(true);
+            int childPreviewCount = 0;
+            foreach (var child in children)
+            {
+                if (child.name.Contains("Player_Preview"))
+                {
+                    childPreviewCount++;
+                    Debug.Log($"Found preview in manager children: {child.name} at {child.position}");
+                }
+            }
+
+            previewCount = globalPreviewCount;
 
             // Validate position if we found exactly one preview
             if (previewCount == 1 && foundPreview != null)
@@ -93,20 +108,27 @@ namespace Game.Preview
 
             hasValidated = true;
 
-            // Log results
+            // Log detailed results
             string result = $"Preview Validation Results:\n" +
-                           $"- Preview Count: {previewCount} (expected: 1)\n" +
+                           $"- Global Preview Count: {globalPreviewCount} (expected: 1)\n" +
+                           $"- Child Preview Count: {childPreviewCount} (expected: 1)\n" +
                            $"- Position Correct: {positionCorrect}\n" +
                            $"- Expected Position: {expectedPosition}\n" +
                            $"- Actual Position: {actualPosition}";
 
-            if (previewCount == 1 && positionCorrect)
+            if (globalPreviewCount == 1 && childPreviewCount == 1 && positionCorrect)
             {
                 Debug.Log($"✓ VALIDATION PASSED\n{result}");
             }
             else
             {
                 Debug.LogError($"✗ VALIDATION FAILED\n{result}");
+                
+                // Additional diagnostics
+                if (globalPreviewCount > 1)
+                {
+                    Debug.LogError($"CRITICAL: Found {globalPreviewCount} player previews! This indicates the multiple preview bug still exists.");
+                }
             }
 
             // Clean up

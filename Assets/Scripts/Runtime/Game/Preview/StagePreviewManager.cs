@@ -370,6 +370,13 @@ namespace Game.Preview
         private void CreatePlayerPreviews()
         {
             if (!player || !playerPreviewMaterial) return;
+            
+            // Additional safety check - don't create previews if not in preview mode
+            if (!isTransitioning && !isPreviewActive)
+            {
+                Debug.LogWarning("CreatePlayerPreviews called but not in preview mode. Skipping creation.");
+                return;
+            }
 
             CleanupPlayerPreviews();
             
@@ -379,11 +386,15 @@ namespace Game.Preview
 
         private void CleanupPlayerPreviews()
         {
+            int cleanedCount = 0;
+            
             // Clean up the tracked preview first
             if (playerXYPreview != null)
             {
+                Debug.Log("Destroying tracked player preview");
                 DestroyImmediate(playerXYPreview);
                 playerXYPreview = null;
+                cleanedCount++;
             }
 
             // Clean up any remaining previews that might be children of this transform
@@ -394,8 +405,19 @@ namespace Game.Preview
                 Transform child = children[i];
                 if (child != null && child != transform && child.name.Contains("Player_Preview"))
                 {
+                    Debug.Log($"Destroying orphaned player preview: {child.name}");
                     DestroyImmediate(child.gameObject);
+                    cleanedCount++;
                 }
+            }
+            
+            if (cleanedCount > 1)
+            {
+                Debug.LogWarning($"Cleaned up {cleanedCount} player previews (expected 0-1). This suggests multiple previews were created.");
+            }
+            else if (cleanedCount == 1)
+            {
+                Debug.Log("Cleaned up 1 player preview (normal)");
             }
         }
 
@@ -410,6 +432,8 @@ namespace Game.Preview
                 return playerXYPreview;
             }
 
+            Debug.Log($"Creating player preview at player position: {player.position}");
+
             GameObject previewObj = new GameObject(name);
             previewObj.transform.SetParent(transform);
             
@@ -421,6 +445,8 @@ namespace Game.Preview
             previewObj.transform.position = previewPos;
             previewObj.transform.rotation = player.rotation;
             previewObj.transform.localScale = Vector3.one;
+
+            Debug.Log($"Player preview created at position: {previewPos}");
 
             ApplyPreviewMaterialRecursive(previewObj, playerPreviewMaterial);
             RemoveCollidersRecursive(previewObj);
