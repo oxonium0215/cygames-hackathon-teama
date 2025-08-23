@@ -71,6 +71,9 @@ namespace Game.Preview
             
             if (perspectiveProjectionManager && perspectiveProjectionManager.IsSwitching) return;
 
+            // Ensure any existing previews are cleaned up before starting
+            CleanupPlayerPreviews();
+
             SaveCurrentState();
             
             if (transitionCoroutine != null)
@@ -352,26 +355,28 @@ namespace Game.Preview
 
             CleanupPlayerPreviews();
             
+            // Create only one preview at the calculated position
             playerXYPreview = CreatePlayerPreviewObject("Player_Preview");
         }
 
         private void CleanupPlayerPreviews()
         {
+            // Clean up the tracked preview first
             if (playerXYPreview != null)
             {
                 DestroyImmediate(playerXYPreview);
                 playerXYPreview = null;
             }
 
-            GameObject[] allObjects = FindObjectsOfType<GameObject>(true);
-            foreach (GameObject obj in allObjects)
+            // Clean up any remaining previews that might be children of this transform
+            // Use more targeted cleanup instead of searching all GameObjects
+            Transform[] children = GetComponentsInChildren<Transform>(true);
+            for (int i = children.Length - 1; i >= 0; i--)
             {
-                if (obj != null && obj.name.Contains("Player_Preview"))
+                Transform child = children[i];
+                if (child != null && child != transform && child.name.Contains("Player_Preview"))
                 {
-                    if (obj.transform.parent == transform || obj.transform.IsChildOf(transform))
-                    {
-                        DestroyImmediate(obj);
-                    }
+                    DestroyImmediate(child.gameObject);
                 }
             }
         }
@@ -380,11 +385,19 @@ namespace Game.Preview
         {
             if (!player) return null;
 
+            // Ensure we don't create multiple previews
+            if (playerXYPreview != null)
+            {
+                Debug.LogWarning("Player preview already exists, skipping creation");
+                return playerXYPreview;
+            }
+
             GameObject previewObj = new GameObject(name);
             previewObj.transform.SetParent(transform);
             
             CopyPlayerVisualComponents(player.gameObject, previewObj);
             
+            // Capture current player position once to ensure consistency
             Vector3 currentPos = player.position;
             Vector3 previewPos = new Vector3(-currentPos.z, currentPos.y, -currentPos.x);
             previewObj.transform.position = previewPos;
@@ -488,7 +501,7 @@ namespace Game.Preview
                 zyPlanePreview = null;
             }
 
-            // Use dedicated cleanup for player previews
+            // Use the improved cleanup for player previews
             CleanupPlayerPreviews();
         }
 
