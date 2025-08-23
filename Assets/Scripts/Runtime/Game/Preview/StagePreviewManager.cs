@@ -56,18 +56,12 @@ namespace Game.Preview
 
         private void OnDestroy()
         {
-            // Clean up all previews and stop any running transitions
             DestroyPreviewOverlays();
             
             if (transitionCoroutine != null)
             {
                 StopCoroutine(transitionCoroutine);
-                transitionCoroutine = null;
             }
-            
-            // Reset state flags
-            isPreviewActive = false;
-            isTransitioning = false;
         }
 
         public void StartPreview()
@@ -76,12 +70,6 @@ namespace Game.Preview
             if (!ValidateComponents()) return;
             
             if (perspectiveProjectionManager && perspectiveProjectionManager.IsSwitching) return;
-
-            // Set transitioning state immediately to prevent race conditions
-            isTransitioning = true;
-
-            // Ensure any existing previews are cleaned up before starting
-            CleanupPlayerPreviews();
 
             SaveCurrentState();
             
@@ -99,9 +87,6 @@ namespace Game.Preview
             if (!ValidateComponents()) return;
             
             if (perspectiveProjectionManager && perspectiveProjectionManager.IsSwitching) return;
-
-            // Set transitioning state immediately to prevent race conditions
-            isTransitioning = true;
 
             if (transitionCoroutine != null)
             {
@@ -139,7 +124,7 @@ namespace Game.Preview
 
         private IEnumerator TransitionToPreview()
         {
-            // isTransitioning is already set to true in StartPreview()
+            isTransitioning = true;
 
             StopPlayerPhysics();
 
@@ -184,14 +169,12 @@ namespace Game.Preview
 
             isPreviewActive = true;
             isTransitioning = false;
-            
-            // Safety cleanup in case the coroutine reference is stale
             transitionCoroutine = null;
         }
 
         private IEnumerator TransitionFromPreview()
         {
-            // isTransitioning is already set to true in EndPreview()
+            isTransitioning = true;
 
             DestroyPreviewOverlays();
 
@@ -223,8 +206,6 @@ namespace Game.Preview
 
             isPreviewActive = false;
             isTransitioning = false;
-            
-            // Safety cleanup in case the coroutine reference is stale
             transitionCoroutine = null;
         }
 
@@ -371,53 +352,29 @@ namespace Game.Preview
         {
             if (!player || !playerPreviewMaterial) return;
             
-            // Additional safety check - don't create previews if not in preview mode
-            if (!isTransitioning && !isPreviewActive)
-            {
-                Debug.LogWarning("CreatePlayerPreviews called but not in preview mode. Skipping creation.");
-                return;
-            }
-
             CleanupPlayerPreviews();
             
-            // Create only one preview at the calculated position
             playerXYPreview = CreatePlayerPreviewObject("Player_Preview");
         }
 
         private void CleanupPlayerPreviews()
         {
-            int cleanedCount = 0;
-            
-            // Clean up the tracked preview first
+            // Clean up the tracked preview object and all its children
             if (playerXYPreview != null)
             {
-                Debug.Log("Destroying tracked player preview");
                 DestroyImmediate(playerXYPreview);
                 playerXYPreview = null;
-                cleanedCount++;
             }
 
-            // Clean up any remaining previews that might be children of this transform
-            // Use more targeted cleanup instead of searching all GameObjects
+            // Clean up any remaining preview objects that might be orphaned
             Transform[] children = GetComponentsInChildren<Transform>(true);
             for (int i = children.Length - 1; i >= 0; i--)
             {
                 Transform child = children[i];
-                if (child != null && child != transform && child.name.Contains("Player_Preview"))
+                if (child != null && child != transform && child.name.Contains("_Preview"))
                 {
-                    Debug.Log($"Destroying orphaned player preview: {child.name}");
                     DestroyImmediate(child.gameObject);
-                    cleanedCount++;
                 }
-            }
-            
-            if (cleanedCount > 1)
-            {
-                Debug.LogWarning($"Cleaned up {cleanedCount} player previews (expected 0-1). This suggests multiple previews were created.");
-            }
-            else if (cleanedCount == 1)
-            {
-                Debug.Log("Cleaned up 1 player preview (normal)");
             }
         }
 
@@ -425,28 +382,17 @@ namespace Game.Preview
         {
             if (!player) return null;
 
-            // Ensure we don't create multiple previews
-            if (playerXYPreview != null)
-            {
-                Debug.LogWarning("Player preview already exists, skipping creation");
-                return playerXYPreview;
-            }
-
-            Debug.Log($"Creating player preview at player position: {player.position}");
-
             GameObject previewObj = new GameObject(name);
             previewObj.transform.SetParent(transform);
             
             CopyPlayerVisualComponents(player.gameObject, previewObj);
             
-            // Capture current player position once to ensure consistency
+            // Calculate the preview position
             Vector3 currentPos = player.position;
             Vector3 previewPos = new Vector3(-currentPos.z, currentPos.y, -currentPos.x);
             previewObj.transform.position = previewPos;
             previewObj.transform.rotation = player.rotation;
             previewObj.transform.localScale = Vector3.one;
-
-            Debug.Log($"Player preview created at position: {previewPos}");
 
             ApplyPreviewMaterialRecursive(previewObj, playerPreviewMaterial);
             RemoveCollidersRecursive(previewObj);
@@ -484,7 +430,8 @@ namespace Game.Preview
                 
                 if (childRenderer || childFilter)
                 {
-                    GameObject childCopy = new GameObject(child.name);
+                    // Fix: Ensure child preview objects also have identifiable names for cleanup
+                    GameObject childCopy = new GameObject(child.name + "_Preview");
                     childCopy.transform.SetParent(target.transform);
                     childCopy.transform.localPosition = child.localPosition;
                     childCopy.transform.localRotation = child.localRotation;
@@ -545,7 +492,6 @@ namespace Game.Preview
                 zyPlanePreview = null;
             }
 
-            // Use the improved cleanup for player previews
             CleanupPlayerPreviews();
         }
 
@@ -560,10 +506,6 @@ namespace Game.Preview
         public bool IsPreviewActive => isPreviewActive;
         public bool IsTransitioning => isTransitioning;
         
-        /// <summary>
-        /// Force cleanup of all preview objects and reset state. 
-        /// Use this as a safety measure if previews get stuck.
-        /// </summary>
         [ContextMenu("Force Cleanup Previews")]
         public void ForceCleanup()
         {
@@ -577,8 +519,6 @@ namespace Game.Preview
             
             isPreviewActive = false;
             isTransitioning = false;
-            
-            Debug.Log("Forced preview cleanup completed");
         }
     }
 }
