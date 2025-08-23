@@ -395,8 +395,8 @@ namespace Game.Preview
             previewObj.transform.rotation = player.rotation;
             previewObj.transform.localScale = player.localScale;
 
-            ApplyPreviewMaterialRecursive(previewObj, playerPreviewMaterial);
-            RemoveCollidersRecursive(previewObj);
+            ApplyPreviewMaterial(previewObj, playerPreviewMaterial);
+            RemoveColliders(previewObj);
 
             return previewObj;
         }
@@ -416,7 +416,7 @@ namespace Game.Preview
             }
         }
 
-        private void ApplyPreviewMaterialRecursive(GameObject obj, Material previewMat)
+        private void ApplyPreviewMaterial(GameObject obj, Material previewMat)
         {
             if (!previewMat) return;
             
@@ -432,7 +432,7 @@ namespace Game.Preview
             }
         }
 
-        private void RemoveCollidersRecursive(GameObject obj)
+        private void RemoveColliders(GameObject obj)
         {
             Collider collider = obj.GetComponent<Collider>();
             if (collider != null)
