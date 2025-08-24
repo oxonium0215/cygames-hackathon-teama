@@ -1,11 +1,12 @@
 using UnityEngine;
+using Game.Core;
 
 namespace Game.Player
 {
     public enum MovePlane { X, Z }
 
     [RequireComponent(typeof(Rigidbody), typeof(Collider))]
-    public partial class PlayerMotor : MonoBehaviour
+    public partial class PlayerMotor : MonoBehaviour, IMovementInputReceiver
     {
         [Header("Movement (Inertia)")]
         [SerializeField] private float maxRunSpeed = 9f;

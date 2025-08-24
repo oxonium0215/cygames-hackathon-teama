@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using Game.Core;
 using Game.Level;
 using Game.Player;
 using Game.Projection;
@@ -11,7 +12,7 @@ namespace Game.Preview
     /// This component can be attached to any GameObject as it finds its dependencies dynamically.
     /// For better organization, consider attaching it to the same GameObject as PerspectiveProjectionManager.
     /// </summary>
-    public class StagePreviewManager : MonoBehaviour
+    public class StagePreviewManager : MonoBehaviour, IPreviewController
     {
         #region Constants
         private const int MAX_RECURSION_DEPTH = 15;

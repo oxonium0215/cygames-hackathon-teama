@@ -1,27 +1,35 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using Game.Player;
-using Game.Projection;
-using Game.Preview;
+using Game.Core;
 
 namespace Game.Input
 {
     // Routes UnityEvents from PlayerInput to gameplay components
     public class PlayerInputRelay : MonoBehaviour
     {
-        [Tooltip("PlayerMotor component that receives movement and jump commands.")]
-        [SerializeField] private PlayerMotor motor;
-        [Tooltip("PerspectiveProjectionManager used to check if perspective switching is active.")]
-        [SerializeField] private PerspectiveProjectionManager perspective;
-        [Tooltip("StagePreviewManager for 3D preview functionality.")]
-        [SerializeField] private StagePreviewManager stagePreview;
+        [Tooltip("Component that receives movement and jump commands.")]
+        [SerializeField] private MonoBehaviour motorComponent;
+        [Tooltip("Component used to check if perspective switching is active.")]
+        [SerializeField] private MonoBehaviour perspectiveComponent;
+        [Tooltip("Component for 3D preview functionality.")]
+        [SerializeField] private MonoBehaviour stagePreviewComponent;
 
         private UnityPlayerInput playerInput;
         private bool wasInputSuppressed;
+        
+        // Cached interface references
+        private IMovementInputReceiver motor;
+        private IPerspectiveSwitcher perspective;
+        private IPreviewController stagePreview;
 
         private void Awake()
         {
             playerInput = new UnityPlayerInput();
+            
+            // Cache interface references
+            motor = motorComponent as IMovementInputReceiver;
+            perspective = perspectiveComponent as IPerspectiveSwitcher;
+            stagePreview = stagePreviewComponent as IPreviewController;
         }
 
         private void Update()
