@@ -83,16 +83,9 @@ namespace Game.Projection
                 return;
             }
 
-            if (!player && playerTransform)
-                player = playerTransform.GetComponent<PlayerMotor>();
-            if (!playerTransform && player)
-                playerTransform = player.transform;
-            if (!playerCollider && playerTransform)
-                playerCollider = playerTransform.GetComponent<Collider>();
+            CachePlayerComponents();
 
             if (rotationCenter) projectionBuilder.SetRotationCenter(rotationCenter);
-
-            if (playerTransform) playerRb = playerTransform.GetComponent<Rigidbody>();
             
             // Auto-discover StagePreviewManager if not assigned
             if (!stagePreviewManager) 
@@ -112,6 +105,21 @@ namespace Game.Projection
             cameraAdapter.RepositionPivotToCenter(rotationCenter, pivotOffset);
             cameraAdapter.SetCameraDistance(cameraDistance);
             ApplyViewImmediate(viewIndex);
+        }
+
+        /// <summary>
+        /// Cache all player-related components to avoid repeated GetComponent calls.
+        /// </summary>
+        private void CachePlayerComponents()
+        {
+            if (!player && playerTransform)
+                player = playerTransform.GetComponent<PlayerMotor>();
+            if (!playerTransform && player)
+                playerTransform = player.transform;
+            if (!playerCollider && playerTransform)
+                playerCollider = playerTransform.GetComponent<Collider>();
+            if (playerTransform && !playerRb)
+                playerRb = playerTransform.GetComponent<Rigidbody>();
         }
 
         public void TogglePerspective()
@@ -156,127 +164,208 @@ namespace Game.Projection
                 yield break;
             }
 
-            // Capture pre-rotation velocity (read ok even if kinematic)
-            Vector3 preVel = playerRb ? playerRb.linearVelocity : Vector3.zero;
-
-            // Use PlayerProjectionAdapter to prepare for rotation
+            // Prepare rotation data
+            var rotationSetup = PrepareRotationData(nextIndex);
+            
+            // Prepare player for rotation
             bool originalKinematic = playerAdapter.PrepareForRotation(makePlayerKinematicDuringSwitch, jumpOnlyDuringSwitch);
 
-            // Rotation setup
+            // Perform rotation animation
+            yield return PerformRotationAnimation(rotationSetup);
+
+            // Finalize the switch
+            FinalizeViewSwitch(nextIndex, rotationSetup, originalKinematic);
+        }
+
+        /// <summary>
+        /// Prepare all data needed for the rotation operation.
+        /// </summary>
+        private RotationSetupData PrepareRotationData(int nextIndex)
+        {
+            Vector3 preVel = playerRb ? playerRb.linearVelocity : Vector3.zero;
             float startYaw = cameraPivot.eulerAngles.y;
             float targetYaw = (nextIndex == 0) ? viewAYaw : viewBYaw;
-
             Game.Level.ProjectionAxis startAxis = GetProjectionForCurrent();
             Vector3 pStart = playerTransform.position;
             float fixedY = pStart.y;
-
             float seamZ = projectionBuilder.GetPlaneZ();
             float seamX = projectionBuilder.GetPlaneX();
 
-            // Inverse-of-projection lateral coordinates (constant during rotation)
-            float preX = pStart.x;
-            float preZ = pStart.z;
+            // Calculate inverse-of-projection lateral coordinates (constant during rotation)
             float xInv, zInv;
-
             if (startAxis == Game.Level.ProjectionAxis.FlattenZ)
             {
                 // XY -> ZY: xInv = preX, zInv = -preX
-                xInv = preX;
-                zInv = -preX;
-            } else
+                xInv = pStart.x;
+                zInv = -pStart.x;
+            }
+            else
             {
                 // ZY -> XY: xInv = -preZ, zInv = preZ
-                xInv = -preZ;
-                zInv = preZ;
+                xInv = -pStart.z;
+                zInv = pStart.z;
             }
 
-            // Rotate camera; place player at inverse-projection coordinates every frame
+            return new RotationSetupData
+            {
+                preVelocity = preVel,
+                startYaw = startYaw,
+                targetYaw = targetYaw,
+                startAxis = startAxis,
+                fixedY = fixedY,
+                seamZ = seamZ,
+                seamX = seamX,
+                xInv = xInv,
+                zInv = zInv,
+                preX = pStart.x,
+                preZ = pStart.z
+            };
+        }
+
+        /// <summary>
+        /// Perform the rotation animation loop.
+        /// </summary>
+        private IEnumerator PerformRotationAnimation(RotationSetupData setup)
+        {
             float progress = 0f;
+            float fixedY = setup.fixedY;
+
             while (progress >= 0f && progress < 1f)
             {
                 progress = projectionController.UpdateRotation(Time.deltaTime);
                 if (progress < 0f) break; // Complete
                 
-                // Camera yaw using CameraProjectionAdapter
-                cameraAdapter.UpdateRotation(startYaw, targetYaw, progress);
+                // Update camera rotation
+                cameraAdapter.UpdateRotation(setup.startYaw, setup.targetYaw, progress);
 
-                if (rotatePlayerDuringSwitch)
-                {
-                    var p = playerTransform.position;
-                    p.x = xInv;
-                    p.z = zInv;
-                    if (fixYDuringRotation) p.y = fixedY;
-                    playerTransform.position = p;
-
-                    // Resolve vertical overlaps while rotating using DepenetrationSolver
-                    if (resolveVerticalOverlapDuringRotation && playerCollider)
-                    {
-                        if (depenetrationSolver.ResolveVerticalOverlapUpwards(playerCollider, playerTransform, 
-                            groundMask, penetrationResolveIterations, false))
-                        {
-                            fixedY = Mathf.Max(fixedY, playerTransform.position.y);
-                        }
-                    }
-                } else if (fixYDuringRotation)
-                {
-                    var p = playerTransform.position;
-                    p.y = fixedY;
-                    playerTransform.position = p;
-                }
+                // Update player position during rotation
+                UpdatePlayerPositionDuringRotation(setup, ref fixedY);
 
                 yield return null;
             }
+        }
 
+        /// <summary>
+        /// Update player position and handle collision resolution during rotation.
+        /// </summary>
+        private void UpdatePlayerPositionDuringRotation(RotationSetupData setup, ref float fixedY)
+        {
+            if (rotatePlayerDuringSwitch)
+            {
+                var p = playerTransform.position;
+                p.x = setup.xInv;
+                p.z = setup.zInv;
+                if (fixYDuringRotation) p.y = fixedY;
+                playerTransform.position = p;
+
+                // Resolve vertical overlaps while rotating
+                if (resolveVerticalOverlapDuringRotation && playerCollider)
+                {
+                    if (depenetrationSolver.ResolveVerticalOverlapUpwards(playerCollider, playerTransform, 
+                        groundMask, penetrationResolveIterations, false))
+                    {
+                        fixedY = Mathf.Max(fixedY, playerTransform.position.y);
+                    }
+                }
+            }
+            else if (fixYDuringRotation)
+            {
+                var p = playerTransform.position;
+                p.y = fixedY;
+                playerTransform.position = p;
+            }
+        }
+
+        /// <summary>
+        /// Finalize the view switch by updating geometry, positioning player, and restoring physics state.
+        /// </summary>
+        private void FinalizeViewSwitch(int nextIndex, RotationSetupData setup, bool originalKinematic)
+        {
             // Switch view and rebuild geometry in-place
             viewIndex = nextIndex;
             RebuildForCurrentView();
 
-            // Final mapped position on target plane
-            {
-                var p = playerTransform.position;
-                if (startAxis == Game.Level.ProjectionAxis.FlattenZ)
-                {
-                    p.x = seamX;
-                    p.z = -preX;
-                } else
-                {
-                    p.x = -preZ;
-                    p.z = seamZ;
-                }
-                playerTransform.position = p;
-            }
+            // Set final mapped position on target plane
+            SetFinalPlayerPosition(setup);
 
-            // Lock to new plane using PlayerProjectionAdapter
-            var nextAxis = GetProjectionForCurrent();
-            float planeConst = (nextAxis == Game.Level.ProjectionAxis.FlattenZ) ? seamZ : seamX;
-            Game.Player.MovePlane newPlane = (nextAxis == Game.Level.ProjectionAxis.FlattenZ) ? Game.Player.MovePlane.X : Game.Player.MovePlane.Z;
-            playerAdapter.SetPlayerPlane(newPlane, planeConst);
+            // Configure player for new plane
+            ConfigurePlayerForNewPlane(setup);
 
-            // Post-rotation handling using DepenetrationSolver
-            bool liftedPost = depenetrationSolver.ResolveVerticalOverlapUpwards(playerCollider, playerTransform, 
+            // Handle post-rotation collision resolution
+            depenetrationSolver.ResolveVerticalOverlapUpwards(playerCollider, playerTransform, 
                 groundMask, penetrationResolveIterations, true);
 
-            // Use PlayerProjectionAdapter to restore state
+            // Restore player state and apply velocity mapping
+            RestorePlayerStateAndVelocity(setup, originalKinematic);
+
+            projectionController.CompleteSwitch();
+        }
+
+        /// <summary>
+        /// Set the player's final position on the target plane.
+        /// </summary>
+        private void SetFinalPlayerPosition(RotationSetupData setup)
+        {
+            var p = playerTransform.position;
+            if (setup.startAxis == Game.Level.ProjectionAxis.FlattenZ)
+            {
+                p.x = setup.seamX;
+                p.z = -setup.preX;
+            }
+            else
+            {
+                p.x = -setup.preZ;
+                p.z = setup.seamZ;
+            }
+            playerTransform.position = p;
+        }
+
+        /// <summary>
+        /// Configure the player for movement on the new projection plane.
+        /// </summary>
+        private void ConfigurePlayerForNewPlane(RotationSetupData setup)
+        {
+            var nextAxis = GetProjectionForCurrent();
+            float planeConst = (nextAxis == Game.Level.ProjectionAxis.FlattenZ) ? setup.seamZ : setup.seamX;
+            Game.Player.MovePlane newPlane = (nextAxis == Game.Level.ProjectionAxis.FlattenZ) ? Game.Player.MovePlane.X : Game.Player.MovePlane.Z;
+            playerAdapter.SetPlayerPlane(newPlane, planeConst);
+        }
+
+        /// <summary>
+        /// Restore player physics state and apply velocity mapping.
+        /// </summary>
+        private void RestorePlayerStateAndVelocity(RotationSetupData setup, bool originalKinematic)
+        {
+            // Restore player state
             playerAdapter.RestoreAfterRotation(originalKinematic, jumpOnlyDuringSwitch);
 
-            // Map inertia using PlayerProjectionAdapter
-            Vector3 vFinal = playerAdapter.MapVelocityBetweenAxes(preVel, startAxis, nextAxis);
+            // Map velocity between coordinate systems
+            var nextAxis = GetProjectionForCurrent();
+            Vector3 vFinal = playerAdapter.MapVelocityBetweenAxes(setup.preVelocity, setup.startAxis, nextAxis);
 
             if (playerRb && !playerRb.isKinematic)
             {
                 playerRb.linearVelocity = vFinal;
             }
-
-            projectionController.CompleteSwitch();
         }
 
-        // Vertical-only overlap resolution (delegated to DepenetrationSolver service).
-        private bool ResolveVerticalOverlapUpwards(int iterations, bool conservativeFallback)
+        /// <summary>
+        /// Data structure to hold all rotation setup parameters.
+        /// </summary>
+        private struct RotationSetupData
         {
-            return depenetrationSolver?.ResolveVerticalOverlapUpwards(playerCollider, playerTransform, 
-                groundMask, iterations, conservativeFallback) ?? false;
+            public Vector3 preVelocity;
+            public float startYaw;
+            public float targetYaw;
+            public Game.Level.ProjectionAxis startAxis;
+            public float fixedY;
+            public float seamZ;
+            public float seamX;
+            public float xInv;
+            public float zInv;
+            public float preX;
+            public float preZ;
         }
-
 
         private IEnumerator RotateCameraOnly(int nextIndex)
         {
@@ -306,8 +395,9 @@ namespace Game.Projection
             RebuildForCurrentView();
 
             if (!playerTransform) return;
-            if (!player && playerTransform) player = playerTransform.GetComponent<PlayerMotor>();
-            if (!playerCollider && playerTransform) playerCollider = playerTransform.GetComponent<Collider>();
+            
+            // Ensure components are cached (in case this is called before Start)
+            CachePlayerComponents();
 
             var axis = GetProjectionForCurrent();
             float planeConst = (axis == Game.Level.ProjectionAxis.FlattenZ) ? projectionBuilder.GetPlaneZ() : projectionBuilder.GetPlaneX();
