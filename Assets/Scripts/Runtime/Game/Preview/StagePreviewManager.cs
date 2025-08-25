@@ -22,6 +22,7 @@ namespace Game.Preview
         private const float DEFAULT_CAMERA_ANGLE_X = 30f;
         private const float DEFAULT_CAMERA_ANGLE_Y = -45f;
         private const float FLATTENED_AXIS_SCALE = 2f;
+        private const float GRID_SIZE_MULTIPLIER = 2f;
         #endregion
 
         [Header("Camera Settings")]
@@ -40,7 +41,11 @@ namespace Game.Preview
         [SerializeField] private Transform levelTransform;
 
         [Header("Preview Overlays")]
-        [SerializeField] private Material previewMaterial;
+        [SerializeField] private Material previewMaterial; // Legacy support
+        [SerializeField] private Material previewMaterialFlattenZ;
+        [SerializeField] private Material previewMaterialFlattenX;
+        [SerializeField] private Material gridMaterialFlattenZ;
+        [SerializeField] private Material gridMaterialFlattenX;
         [SerializeField] private Material playerPreviewMaterial;
 
         private Vector3 originalCameraPosition;
@@ -58,6 +63,8 @@ namespace Game.Preview
 
         private GameObject flattenZPlanePreview;
         private GameObject flattenXPlanePreview;
+        private GameObject flattenZGridPreview;
+        private GameObject flattenXGridPreview;
         private GameObject playerPreview;
 
         private void Awake()
@@ -279,10 +286,29 @@ namespace Game.Preview
         {
             if (!geometryProjector || !geometryProjector.SourceRoot) return;
 
-            if (previewMaterial)
+            // Use plane-specific materials if available, otherwise fallback to legacy material
+            Material flattenZMat = previewMaterialFlattenZ != null ? previewMaterialFlattenZ : previewMaterial;
+            Material flattenXMat = previewMaterialFlattenX != null ? previewMaterialFlattenX : previewMaterial;
+
+            if (flattenZMat)
             {
-                CreatePlanePreview(ref flattenZPlanePreview, "FlattenZ_Preview", ProjectionAxis.FlattenZ);
-                CreatePlanePreview(ref flattenXPlanePreview, "FlattenX_Preview", ProjectionAxis.FlattenX);
+                CreatePlanePreview(ref flattenZPlanePreview, "FlattenZ_Preview", ProjectionAxis.FlattenZ, flattenZMat);
+            }
+
+            if (flattenXMat)
+            {
+                CreatePlanePreview(ref flattenXPlanePreview, "FlattenX_Preview", ProjectionAxis.FlattenX, flattenXMat);
+            }
+
+            // Create grid overlays
+            if (gridMaterialFlattenZ)
+            {
+                CreateGridOverlay(ref flattenZGridPreview, "FlattenZ_Grid", ProjectionAxis.FlattenZ, gridMaterialFlattenZ);
+            }
+
+            if (gridMaterialFlattenX)
+            {
+                CreateGridOverlay(ref flattenXGridPreview, "FlattenX_Grid", ProjectionAxis.FlattenX, gridMaterialFlattenX);
             }
 
             if (playerPreviewMaterial && player)
@@ -291,7 +317,7 @@ namespace Game.Preview
             }
         }
 
-        private void CreatePlanePreview(ref GameObject previewObject, string name, ProjectionAxis axis)
+        private void CreatePlanePreview(ref GameObject previewObject, string name, ProjectionAxis axis, Material planeMaterial)
         {
             if (previewObject != null)
             {
@@ -308,17 +334,17 @@ namespace Game.Preview
             {
                 foreach (Transform child in sourceRoot)
                 {
-                    CloneObjectForPreview(child, previewObject.transform, axis);
+                    CloneObjectForPreview(child, previewObject.transform, axis, planeMaterial);
                 }
             }
         }
 
-        private void CloneObjectForPreview(Transform original, Transform parent, ProjectionAxis axis)
+        private void CloneObjectForPreview(Transform original, Transform parent, ProjectionAxis axis, Material planeMaterial)
         {
-            CloneObjectForPreviewRecursive(original, parent, axis, 0, MAX_RECURSION_DEPTH);
+            CloneObjectForPreviewRecursive(original, parent, axis, planeMaterial, 0, MAX_RECURSION_DEPTH);
         }
 
-        private void CloneObjectForPreviewRecursive(Transform original, Transform parent, ProjectionAxis axis, int currentDepth, int maxDepth)
+        private void CloneObjectForPreviewRecursive(Transform original, Transform parent, ProjectionAxis axis, Material planeMaterial, int currentDepth, int maxDepth)
         {
             if (currentDepth >= maxDepth) return;
             
@@ -346,13 +372,13 @@ namespace Game.Preview
             MeshRenderer originalRenderer = original.GetComponent<MeshRenderer>();
             MeshFilter originalFilter = original.GetComponent<MeshFilter>();
             
-            if (originalRenderer && originalFilter && previewMaterial)
+            if (originalRenderer && originalFilter && planeMaterial)
             {
                 MeshRenderer cloneRenderer = clone.AddComponent<MeshRenderer>();
                 MeshFilter cloneFilter = clone.AddComponent<MeshFilter>();
                 
                 cloneFilter.mesh = originalFilter.mesh;
-                cloneRenderer.material = previewMaterial;
+                cloneRenderer.material = planeMaterial;
             }
 
             foreach (Transform child in original)
@@ -360,8 +386,95 @@ namespace Game.Preview
                 if (child == null) continue;
                 // Skip if child is already a preview object to prevent recursive preview generation
                 if (child.name.Contains("Preview")) continue;
-                CloneObjectForPreviewRecursive(child, clone.transform, axis, currentDepth + 1, maxDepth);
+                CloneObjectForPreviewRecursive(child, clone.transform, axis, planeMaterial, currentDepth + 1, maxDepth);
             }
+        }
+
+        private void CreateGridOverlay(ref GameObject gridObject, string name, ProjectionAxis axis, Material gridMaterial)
+        {
+            if (gridObject != null)
+            {
+                DestroyImmediate(gridObject);
+            }
+
+            gridObject = new GameObject(name);
+            Transform parentTransform = levelTransform ? levelTransform : transform;
+            gridObject.transform.SetParent(parentTransform);
+
+            // Create a grid plane
+            GameObject gridPlane = CreateGridPlane(axis, gridMaterial);
+            if (gridPlane != null)
+            {
+                gridPlane.transform.SetParent(gridObject.transform);
+                gridPlane.name = "GridPlane";
+            }
+        }
+
+        private GameObject CreateGridPlane(ProjectionAxis axis, Material gridMaterial)
+        {
+            GameObject gridPlane = new GameObject("GridPlane");
+            
+            // Create a simple plane mesh for the grid
+            MeshFilter meshFilter = gridPlane.AddComponent<MeshFilter>();
+            MeshRenderer meshRenderer = gridPlane.AddComponent<MeshRenderer>();
+            
+            // Create a simple quad mesh
+            Mesh gridMesh = new Mesh();
+            gridMesh.name = "GridMesh";
+            
+            // Define grid size based on camera preview size
+            float gridSize = previewCameraSize * GRID_SIZE_MULTIPLIER;
+            
+            // Create grid vertices
+            Vector3[] vertices = new Vector3[4]
+            {
+                new Vector3(-gridSize, -gridSize, 0),
+                new Vector3(gridSize, -gridSize, 0),
+                new Vector3(gridSize, gridSize, 0),
+                new Vector3(-gridSize, gridSize, 0)
+            };
+            
+            Vector2[] uv = new Vector2[4]
+            {
+                new Vector2(0, 0),
+                new Vector2(gridSize / 2f, 0),
+                new Vector2(gridSize / 2f, gridSize / 2f),
+                new Vector2(0, gridSize / 2f)
+            };
+            
+            int[] triangles = new int[6]
+            {
+                0, 1, 2,
+                0, 2, 3
+            };
+            
+            gridMesh.vertices = vertices;
+            gridMesh.uv = uv;
+            gridMesh.triangles = triangles;
+            gridMesh.RecalculateNormals();
+            
+            meshFilter.mesh = gridMesh;
+            meshRenderer.material = gridMaterial;
+            
+            // Position the grid on the appropriate plane
+            Vector3 gridPosition = Vector3.zero;
+            Quaternion gridRotation = Quaternion.identity;
+            
+            if (axis == ProjectionAxis.FlattenZ)
+            {
+                gridPosition.z = geometryProjector.GetPlaneZ();
+                gridRotation = Quaternion.identity; // XY plane
+            }
+            else if (axis == ProjectionAxis.FlattenX)
+            {
+                gridPosition.x = geometryProjector.GetPlaneX();
+                gridRotation = Quaternion.Euler(0, 90, 0); // ZY plane
+            }
+            
+            gridPlane.transform.position = gridPosition;
+            gridPlane.transform.rotation = gridRotation;
+            
+            return gridPlane;
         }
 
         private Vector3 ProjectPosition(Vector3 position, ProjectionAxis axis)
@@ -553,6 +666,18 @@ namespace Game.Preview
             {
                 DestroyImmediate(flattenXPlanePreview);
                 flattenXPlanePreview = null;
+            }
+
+            if (flattenZGridPreview != null)
+            {
+                DestroyImmediate(flattenZGridPreview);
+                flattenZGridPreview = null;
+            }
+
+            if (flattenXGridPreview != null)
+            {
+                DestroyImmediate(flattenXGridPreview);
+                flattenXGridPreview = null;
             }
 
             // Use dedicated cleanup for player previews
