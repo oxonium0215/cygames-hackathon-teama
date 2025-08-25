@@ -6,11 +6,6 @@ using Game.Projection;
 
 namespace Game.Preview
 {
-    /// <summary>
-    /// Manages stage preview functionality including camera transitions and preview object generation.
-    /// This component can be attached to any GameObject as it finds its dependencies dynamically.
-    /// For better organization, consider attaching it to the same GameObject as PerspectiveProjectionManager.
-    /// </summary>
     public class StagePreviewManager : MonoBehaviour
     {
         #region Constants
@@ -22,6 +17,7 @@ namespace Game.Preview
         private const float DEFAULT_CAMERA_ANGLE_X = 30f;
         private const float DEFAULT_CAMERA_ANGLE_Y = -45f;
         private const float FLATTENED_AXIS_SCALE = 2f;
+        private const float GRID_SIZE_MULTIPLIER = 2f;
         #endregion
 
         [Header("Camera Settings")]
@@ -41,6 +37,10 @@ namespace Game.Preview
 
         [Header("Preview Overlays")]
         [SerializeField] private Material previewMaterial;
+        [SerializeField] private Material wireframeMaterialFlattenZ;
+        [SerializeField] private Material wireframeMaterialFlattenX;
+        [SerializeField] private Material gridMaterialFlattenZ;
+        [SerializeField] private Material gridMaterialFlattenX;
         [SerializeField] private Material playerPreviewMaterial;
 
         private Vector3 originalCameraPosition;
@@ -58,6 +58,8 @@ namespace Game.Preview
 
         private GameObject flattenZPlanePreview;
         private GameObject flattenXPlanePreview;
+        private GameObject flattenZGridPreview;
+        private GameObject flattenXGridPreview;
         private GameObject playerPreview;
 
         private void Awake()
@@ -279,10 +281,27 @@ namespace Game.Preview
         {
             if (!geometryProjector || !geometryProjector.SourceRoot) return;
 
-            if (previewMaterial)
+            Material flattenZMat = wireframeMaterialFlattenZ != null ? wireframeMaterialFlattenZ : previewMaterial;
+            Material flattenXMat = wireframeMaterialFlattenX != null ? wireframeMaterialFlattenX : previewMaterial;
+
+            if (flattenZMat)
             {
-                CreatePlanePreview(ref flattenZPlanePreview, "FlattenZ_Preview", ProjectionAxis.FlattenZ);
-                CreatePlanePreview(ref flattenXPlanePreview, "FlattenX_Preview", ProjectionAxis.FlattenX);
+                CreatePlanePreview(ref flattenZPlanePreview, "FlattenZ_Preview", ProjectionAxis.FlattenZ, flattenZMat);
+            }
+
+            if (flattenXMat)
+            {
+                CreatePlanePreview(ref flattenXPlanePreview, "FlattenX_Preview", ProjectionAxis.FlattenX, flattenXMat);
+            }
+
+            if (gridMaterialFlattenZ)
+            {
+                CreateGridOverlay(ref flattenZGridPreview, "FlattenZ_Grid", ProjectionAxis.FlattenZ, gridMaterialFlattenZ);
+            }
+
+            if (gridMaterialFlattenX)
+            {
+                CreateGridOverlay(ref flattenXGridPreview, "FlattenX_Grid", ProjectionAxis.FlattenX, gridMaterialFlattenX);
             }
 
             if (playerPreviewMaterial && player)
@@ -291,7 +310,7 @@ namespace Game.Preview
             }
         }
 
-        private void CreatePlanePreview(ref GameObject previewObject, string name, ProjectionAxis axis)
+        private void CreatePlanePreview(ref GameObject previewObject, string name, ProjectionAxis axis, Material planeMaterial)
         {
             if (previewObject != null)
             {
@@ -299,7 +318,6 @@ namespace Game.Preview
             }
 
             previewObject = new GameObject(name);
-            // Parent to Level instead of this StagePreviewManager
             Transform parentTransform = levelTransform ? levelTransform : transform;
             previewObject.transform.SetParent(parentTransform);
 
@@ -308,21 +326,20 @@ namespace Game.Preview
             {
                 foreach (Transform child in sourceRoot)
                 {
-                    CloneObjectForPreview(child, previewObject.transform, axis);
+                    CloneObjectForPreview(child, previewObject.transform, axis, planeMaterial);
                 }
             }
         }
 
-        private void CloneObjectForPreview(Transform original, Transform parent, ProjectionAxis axis)
+        private void CloneObjectForPreview(Transform original, Transform parent, ProjectionAxis axis, Material planeMaterial)
         {
-            CloneObjectForPreviewRecursive(original, parent, axis, 0, MAX_RECURSION_DEPTH);
+            CloneObjectForPreviewRecursive(original, parent, axis, planeMaterial, 0, MAX_RECURSION_DEPTH);
         }
 
-        private void CloneObjectForPreviewRecursive(Transform original, Transform parent, ProjectionAxis axis, int currentDepth, int maxDepth)
+        private void CloneObjectForPreviewRecursive(Transform original, Transform parent, ProjectionAxis axis, Material planeMaterial, int currentDepth, int maxDepth)
         {
             if (currentDepth >= maxDepth) return;
             
-            // Skip if original is already a preview object to prevent recursive preview generation
             if (original.name.Contains("Preview")) return;
 
             GameObject clone = new GameObject(original.name + "_Preview");
@@ -331,7 +348,6 @@ namespace Game.Preview
             clone.transform.localPosition = ProjectPosition(original.position, axis);
             clone.transform.localRotation = original.rotation;
             
-            // Set uniform depth size
             Vector3 scale = original.localScale;
             if (axis == ProjectionAxis.FlattenZ)
             {
@@ -346,22 +362,103 @@ namespace Game.Preview
             MeshRenderer originalRenderer = original.GetComponent<MeshRenderer>();
             MeshFilter originalFilter = original.GetComponent<MeshFilter>();
             
-            if (originalRenderer && originalFilter && previewMaterial)
+            if (originalRenderer && originalFilter && planeMaterial)
             {
                 MeshRenderer cloneRenderer = clone.AddComponent<MeshRenderer>();
                 MeshFilter cloneFilter = clone.AddComponent<MeshFilter>();
                 
                 cloneFilter.mesh = originalFilter.mesh;
-                cloneRenderer.material = previewMaterial;
+                cloneRenderer.material = planeMaterial;
             }
 
             foreach (Transform child in original)
             {
                 if (child == null) continue;
-                // Skip if child is already a preview object to prevent recursive preview generation
                 if (child.name.Contains("Preview")) continue;
-                CloneObjectForPreviewRecursive(child, clone.transform, axis, currentDepth + 1, maxDepth);
+                CloneObjectForPreviewRecursive(child, clone.transform, axis, planeMaterial, currentDepth + 1, maxDepth);
             }
+        }
+
+        private void CreateGridOverlay(ref GameObject gridObject, string name, ProjectionAxis axis, Material gridMaterial)
+        {
+            if (gridObject != null)
+            {
+                DestroyImmediate(gridObject);
+            }
+
+            gridObject = new GameObject(name);
+            Transform parentTransform = levelTransform ? levelTransform : transform;
+            gridObject.transform.SetParent(parentTransform);
+
+            // Create a grid plane
+            GameObject gridPlane = CreateGridPlane(axis, gridMaterial);
+            if (gridPlane != null)
+            {
+                gridPlane.transform.SetParent(gridObject.transform);
+                gridPlane.name = "GridPlane";
+            }
+        }
+
+        private GameObject CreateGridPlane(ProjectionAxis axis, Material gridMaterial)
+        {
+            GameObject gridPlane = new GameObject("GridPlane");
+            
+            MeshFilter meshFilter = gridPlane.AddComponent<MeshFilter>();
+            MeshRenderer meshRenderer = gridPlane.AddComponent<MeshRenderer>();
+            
+            Mesh gridMesh = new Mesh();
+            gridMesh.name = "GridMesh";
+            
+            float gridSize = previewCameraSize * GRID_SIZE_MULTIPLIER;
+            
+            Vector3[] vertices = new Vector3[4]
+            {
+                new Vector3(-gridSize, -gridSize, 0),
+                new Vector3(gridSize, -gridSize, 0),
+                new Vector3(gridSize, gridSize, 0),
+                new Vector3(-gridSize, gridSize, 0)
+            };
+            
+            Vector2[] uv = new Vector2[4]
+            {
+                new Vector2(-gridSize, -gridSize),
+                new Vector2(gridSize, -gridSize),
+                new Vector2(gridSize, gridSize),
+                new Vector2(-gridSize, gridSize)
+            };
+            
+            int[] triangles = new int[6]
+            {
+                0, 1, 2,
+                0, 2, 3
+            };
+            
+            gridMesh.vertices = vertices;
+            gridMesh.uv = uv;
+            gridMesh.triangles = triangles;
+            gridMesh.RecalculateNormals();
+            
+            meshFilter.mesh = gridMesh;
+            meshRenderer.material = gridMaterial;
+            
+            Vector3 gridPosition = Vector3.zero;
+            Quaternion gridRotation = Quaternion.identity;
+            
+            if (axis == ProjectionAxis.FlattenZ)
+            {
+                gridPosition.z = geometryProjector.GetPlaneZ();
+                gridRotation = Quaternion.identity;
+            }
+            else if (axis == ProjectionAxis.FlattenX)
+            {
+                gridPosition.x = geometryProjector.GetPlaneX();
+                gridRotation = Quaternion.Euler(0, 90, 0);
+            }
+            
+            gridPlane.transform.position = gridPosition;
+            gridPlane.transform.rotation = gridRotation;
+            
+            return gridPlane;
         }
 
         private Vector3 ProjectPosition(Vector3 position, ProjectionAxis axis)
@@ -416,14 +513,12 @@ namespace Game.Preview
                 playerPreview = null;
             }
 
-            // Check both under Level and under this transform for cleanup
             Transform[] searchTransforms = { levelTransform, transform };
             
             foreach (Transform searchTransform in searchTransforms)
             {
                 if (searchTransform == null) continue;
                 
-                // Use GetComponentsInChildren to find all preview objects in hierarchy
                 Transform[] allChildren = searchTransform.GetComponentsInChildren<Transform>(true);
                 foreach (Transform child in allChildren)
                 {
@@ -440,7 +535,6 @@ namespace Game.Preview
             if (!player) return null;
 
             GameObject previewObj = new GameObject(name);
-            // Parent to Level instead of this StagePreviewManager
             Transform parentTransform = levelTransform ? levelTransform : transform;
             previewObj.transform.SetParent(parentTransform);
             
@@ -467,7 +561,6 @@ namespace Game.Preview
         {
             if (currentDepth >= maxDepth) return;
             
-            // Skip if source is already a preview object to prevent recursive preview generation
             if (source.name.Contains("Preview")) return;
 
             MeshRenderer sourceMeshRenderer = source.GetComponent<MeshRenderer>();
@@ -486,7 +579,6 @@ namespace Game.Preview
             {
                 if (child == null) continue;
                 
-                // Skip if child is already a preview object to prevent recursive preview generation
                 if (child.name.Contains("Preview")) continue;
 
                 MeshRenderer childRenderer = child.GetComponent<MeshRenderer>();
@@ -553,6 +645,18 @@ namespace Game.Preview
             {
                 DestroyImmediate(flattenXPlanePreview);
                 flattenXPlanePreview = null;
+            }
+
+            if (flattenZGridPreview != null)
+            {
+                DestroyImmediate(flattenZGridPreview);
+                flattenZGridPreview = null;
+            }
+
+            if (flattenXGridPreview != null)
+            {
+                DestroyImmediate(flattenXGridPreview);
+                flattenXGridPreview = null;
             }
 
             // Use dedicated cleanup for player previews
