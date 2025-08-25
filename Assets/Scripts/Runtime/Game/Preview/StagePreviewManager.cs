@@ -41,6 +41,7 @@ namespace Game.Preview
         [SerializeField] private Rigidbody playerRigidbody;
         [SerializeField] private PerspectiveProjectionManager perspectiveProjectionManager;
         [SerializeField] private Transform levelTransform;
+        [SerializeField] private Transform cameraPivot;
 
         [Header("Preview Overlays")]
         [SerializeField] private Material previewMaterial;
@@ -50,6 +51,9 @@ namespace Game.Preview
         private Quaternion originalCameraRotation;
         private float originalCameraSize;
         private bool originalOrthographic;
+        
+        // Store original cameraPivot rotation for restoration
+        private Quaternion originalCameraPivotRotation;
 
         private Vector3 originalPlayerVelocity;
         private Vector3 originalPlayerAngularVelocity;
@@ -63,10 +67,8 @@ namespace Game.Preview
         private GameObject flattenXPlanePreview;
         private GameObject playerPreview;
 
-        // Camera rotation state during preview
-        private Vector3 rotationCenter;
+        // Camera rotation state during preview - simplified for cameraPivot approach
         private float currentRotationAngle;
-        private float baseDistance;
         private float currentHorizontalInput;
 
         private void Awake()
@@ -79,6 +81,15 @@ namespace Game.Preview
             if (!playerRigidbody && player) playerRigidbody = player.GetComponent<Rigidbody>();
             if (!perspectiveProjectionManager) perspectiveProjectionManager = FindFirstObjectByType<PerspectiveProjectionManager>();
             if (!levelTransform) levelTransform = GameObject.Find("Level")?.transform;
+            
+            // Find cameraPivot from PerspectiveProjectionManager if not assigned
+            if (!cameraPivot && perspectiveProjectionManager)
+            {
+                var pivotField = perspectiveProjectionManager.GetType().GetField("cameraPivot", 
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (pivotField != null)
+                    cameraPivot = pivotField.GetValue(perspectiveProjectionManager) as Transform;
+            }
         }
 
         private void Update()
@@ -161,6 +172,12 @@ namespace Game.Preview
                 Debug.LogWarning("StagePreviewManager: player is not assigned");
                 isValid = false;
             }
+            
+            if (!cameraPivot)
+            {
+                Debug.LogWarning("StagePreviewManager: cameraPivot is not assigned - camera rotation will not work");
+                // Don't mark as invalid since the rest of the functionality should still work
+            }
 
             return isValid;
         }
@@ -173,6 +190,10 @@ namespace Game.Preview
             originalCameraRotation = cameraTransform.rotation;
             originalCameraSize = mainCamera.orthographicSize;
             originalOrthographic = mainCamera.orthographic;
+            
+            // Save original cameraPivot rotation for restoration
+            if (cameraPivot)
+                originalCameraPivotRotation = cameraPivot.rotation;
 
             if (playerRigidbody)
             {
@@ -231,8 +252,8 @@ namespace Game.Preview
 
             CreatePreviewOverlays();
 
-            // Initialize camera rotation state
-            InitializeCameraRotation();
+            // Initialize camera rotation state for cameraPivot approach
+            currentRotationAngle = 0f;
 
             isPreviewActive = true;
             isTransitioning = false;
@@ -242,8 +263,13 @@ namespace Game.Preview
         {
             isTransitioning = true;
 
-            // Reset camera rotation input
+            // Reset camera rotation input and angle
             currentHorizontalInput = 0f;
+            currentRotationAngle = 0f;
+            
+            // Restore original cameraPivot rotation
+            if (cameraPivot)
+                cameraPivot.rotation = originalCameraPivotRotation;
 
             DestroyPreviewOverlays();
 
@@ -589,23 +615,6 @@ namespace Game.Preview
             geometryProjector.Rebuild(currentAxis);
         }
 
-        private void InitializeCameraRotation()
-        {
-            if (!cameraTransform || !player) return;
-
-            // Set rotation center to player position
-            rotationCenter = player.position;
-
-            // Calculate base distance from camera to center
-            Vector3 cameraPos = cameraTransform.position;
-            Vector3 toCameraVector = cameraPos - rotationCenter;
-            baseDistance = new Vector3(toCameraVector.x, 0f, toCameraVector.z).magnitude;
-
-            // Initialize current rotation angle from camera's Y rotation relative to center
-            Vector3 directionToCamera = (cameraPos - rotationCenter).normalized;
-            currentRotationAngle = Mathf.Atan2(directionToCamera.x, directionToCamera.z) * Mathf.Rad2Deg;
-        }
-
         public void HandleCameraRotationInput(float horizontalInput)
         {
             // Store the current input value for continuous processing
@@ -614,9 +623,9 @@ namespace Game.Preview
 
         private void ProcessCameraRotation()
         {
-            if (!cameraTransform) return;
+            if (!cameraPivot) return;
 
-            // Rotate camera around the center point while maintaining top-down perspective
+            // Rotate cameraPivot around its Y-axis
             float rotationDelta = currentHorizontalInput * CAMERA_ROTATION_SPEED * Time.unscaledDeltaTime;
             float newRotationAngle = currentRotationAngle + rotationDelta;
 
@@ -628,17 +637,10 @@ namespace Game.Preview
             {
                 currentRotationAngle = newRotationAngle;
 
-                // Calculate new camera position around the center
-                float angleRad = currentRotationAngle * Mathf.Deg2Rad;
-                Vector3 offset = new Vector3(Mathf.Sin(angleRad) * baseDistance, 0f, Mathf.Cos(angleRad) * baseDistance);
-
-                Vector3 newPosition = rotationCenter + offset;
-                newPosition.y = cameraTransform.position.y; // Keep original height
-
-                cameraTransform.position = newPosition;
-
-                // Keep the camera rotation fixed at the default preview angles to maintain top-down perspective
-                cameraTransform.rotation = Quaternion.Euler(DEFAULT_CAMERA_ANGLE_X, DEFAULT_CAMERA_ANGLE_Y + currentRotationAngle, 0f);
+                // Apply rotation to cameraPivot on Y-axis
+                Vector3 eulerAngles = originalCameraPivotRotation.eulerAngles;
+                eulerAngles.y += currentRotationAngle;
+                cameraPivot.rotation = Quaternion.Euler(eulerAngles);
             }
         }
 
