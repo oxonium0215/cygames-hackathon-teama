@@ -7,7 +7,7 @@ using Game.Player;
 
 namespace Game.Projection
 {
-    public class PerspectiveProjectionManager : MonoBehaviour
+    public class PerspectiveProjectionManager : MonoBehaviour, IInputSuppressor
     {
         [Header("References")]
         [SerializeField] private Transform rotationCenter;
@@ -71,6 +71,9 @@ namespace Game.Projection
         
         /// <summary>Returns the configured jump-only-during-switch setting.</summary>
         public bool JumpOnlyDuringSwitch => jumpOnlyDuringSwitch;
+
+        /// <summary>Returns true if input should be suppressed (IInputSuppressor interface).</summary>
+        public bool IsInputSuppressed => IsSwitching && JumpOnlyDuringSwitch;
 
         private void Start()
         {
@@ -140,11 +143,7 @@ namespace Game.Projection
 
         private IEnumerator SwitchRoutine(int nextIndex)
         {
-            projectionController.BeginSwitch(nextIndex, rotateDuration, rotateEase);
-
-            // Clear previous projection state and reposition camera
-            projectionBuilder.ClearProjected();
-            cameraAdapter.RepositionPivotToCenter(rotationCenter, pivotOffset);
+            PrepareForSwitch(nextIndex);
 
             // If no player, rotate camera only
             if (!playerTransform)
@@ -156,118 +155,181 @@ namespace Game.Projection
                 yield break;
             }
 
-            // Capture pre-rotation velocity (read ok even if kinematic)
-            Vector3 preVel = playerRb ? playerRb.linearVelocity : Vector3.zero;
+            var switchData = PreparePlayerRotationData(nextIndex);
+            yield return PerformRotationLoop(switchData);
+            FinalizePlayerSwitch(switchData);
+        }
 
-            // Use PlayerProjectionAdapter to prepare for rotation
-            bool originalKinematic = playerAdapter.PrepareForRotation(makePlayerKinematicDuringSwitch, jumpOnlyDuringSwitch);
+        private void PrepareForSwitch(int nextIndex)
+        {
+            projectionController.BeginSwitch(nextIndex, rotateDuration, rotateEase);
+            projectionBuilder.ClearProjected();
+            cameraAdapter.RepositionPivotToCenter(rotationCenter, pivotOffset);
+        }
 
-            // Rotation setup
-            float startYaw = cameraPivot.eulerAngles.y;
-            float targetYaw = (nextIndex == 0) ? viewAYaw : viewBYaw;
-
-            Game.Level.ProjectionAxis startAxis = GetProjectionForCurrent();
+        private PlayerSwitchData PreparePlayerRotationData(int nextIndex)
+        {
+            var data = new PlayerSwitchData();
+            data.nextIndex = nextIndex;
+            
+            // Capture pre-rotation state
+            data.preVel = playerRb ? playerRb.linearVelocity : Vector3.zero;
+            data.originalKinematic = playerAdapter.PrepareForRotation(makePlayerKinematicDuringSwitch, jumpOnlyDuringSwitch);
+            
+            // Setup rotation parameters
+            data.startYaw = cameraPivot.eulerAngles.y;
+            data.targetYaw = (nextIndex == 0) ? viewAYaw : viewBYaw;
+            data.startAxis = GetProjectionForCurrent();
+            
             Vector3 pStart = playerTransform.position;
-            float fixedY = pStart.y;
+            data.fixedY = pStart.y;
+            data.seamZ = projectionBuilder.GetPlaneZ();
+            data.seamX = projectionBuilder.GetPlaneX();
+            
+            // Calculate inverse-projection coordinates
+            CalculateInverseProjectionCoordinates(data, pStart);
+            
+            return data;
+        }
 
-            float seamZ = projectionBuilder.GetPlaneZ();
-            float seamX = projectionBuilder.GetPlaneX();
-
-            // Inverse-of-projection lateral coordinates (constant during rotation)
+        private void CalculateInverseProjectionCoordinates(PlayerSwitchData data, Vector3 pStart)
+        {
             float preX = pStart.x;
             float preZ = pStart.z;
-            float xInv, zInv;
-
-            if (startAxis == Game.Level.ProjectionAxis.FlattenZ)
+            
+            if (data.startAxis == Game.Level.ProjectionAxis.FlattenZ)
             {
                 // XY -> ZY: xInv = preX, zInv = -preX
-                xInv = preX;
-                zInv = -preX;
+                data.xInv = preX;
+                data.zInv = -preX;
+                data.preX = preX;
+                data.preZ = preZ;
             } else
             {
                 // ZY -> XY: xInv = -preZ, zInv = preZ
-                xInv = -preZ;
-                zInv = preZ;
+                data.xInv = -preZ;
+                data.zInv = preZ;
+                data.preX = preX;
+                data.preZ = preZ;
             }
+        }
 
-            // Rotate camera; place player at inverse-projection coordinates every frame
+        private IEnumerator PerformRotationLoop(PlayerSwitchData data)
+        {
             float progress = 0f;
             while (progress >= 0f && progress < 1f)
             {
                 progress = projectionController.UpdateRotation(Time.deltaTime);
                 if (progress < 0f) break; // Complete
                 
-                // Camera yaw using CameraProjectionAdapter
-                cameraAdapter.UpdateRotation(startYaw, targetYaw, progress);
-
-                if (rotatePlayerDuringSwitch)
-                {
-                    var p = playerTransform.position;
-                    p.x = xInv;
-                    p.z = zInv;
-                    if (fixYDuringRotation) p.y = fixedY;
-                    playerTransform.position = p;
-
-                    // Resolve vertical overlaps while rotating using DepenetrationSolver
-                    if (resolveVerticalOverlapDuringRotation && playerCollider)
-                    {
-                        if (depenetrationSolver.ResolveVerticalOverlapUpwards(playerCollider, playerTransform, 
-                            groundMask, penetrationResolveIterations, false))
-                        {
-                            fixedY = Mathf.Max(fixedY, playerTransform.position.y);
-                        }
-                    }
-                } else if (fixYDuringRotation)
-                {
-                    var p = playerTransform.position;
-                    p.y = fixedY;
-                    playerTransform.position = p;
-                }
-
+                cameraAdapter.UpdateRotation(data.startYaw, data.targetYaw, progress);
+                HandlePlayerDuringRotation(data);
+                
                 yield return null;
             }
+        }
 
-            // Switch view and rebuild geometry in-place
-            viewIndex = nextIndex;
-            RebuildForCurrentView();
-
-            // Final mapped position on target plane
+        private void HandlePlayerDuringRotation(PlayerSwitchData data)
+        {
+            if (rotatePlayerDuringSwitch)
             {
                 var p = playerTransform.position;
-                if (startAxis == Game.Level.ProjectionAxis.FlattenZ)
+                p.x = data.xInv;
+                p.z = data.zInv;
+                if (fixYDuringRotation) p.y = data.fixedY;
+                playerTransform.position = p;
+
+                // Resolve vertical overlaps while rotating
+                if (resolveVerticalOverlapDuringRotation && playerCollider)
                 {
-                    p.x = seamX;
-                    p.z = -preX;
-                } else
-                {
-                    p.x = -preZ;
-                    p.z = seamZ;
+                    if (depenetrationSolver.ResolveVerticalOverlapUpwards(playerCollider, playerTransform, 
+                        groundMask, penetrationResolveIterations, false))
+                    {
+                        data.fixedY = Mathf.Max(data.fixedY, playerTransform.position.y);
+                    }
                 }
+            } else if (fixYDuringRotation)
+            {
+                var p = playerTransform.position;
+                p.y = data.fixedY;
                 playerTransform.position = p;
             }
+        }
 
-            // Lock to new plane using PlayerProjectionAdapter
+        private void FinalizePlayerSwitch(PlayerSwitchData data)
+        {
+            // Switch view and rebuild geometry
+            viewIndex = data.nextIndex;
+            RebuildForCurrentView();
+
+            // Set final mapped position on target plane
+            SetFinalPlayerPosition(data);
+            
+            // Lock to new plane and handle post-rotation cleanup
+            HandlePostRotation(data);
+            
+            // Restore player state and apply final velocity
+            RestorePlayerState(data);
+            
+            projectionController.CompleteSwitch();
+        }
+
+        private void SetFinalPlayerPosition(PlayerSwitchData data)
+        {
+            var p = playerTransform.position;
+            if (data.startAxis == Game.Level.ProjectionAxis.FlattenZ)
+            {
+                p.x = data.seamX;
+                p.z = -data.preX;
+            } else
+            {
+                p.x = -data.preZ;
+                p.z = data.seamZ;
+            }
+            playerTransform.position = p;
+        }
+
+        private void HandlePostRotation(PlayerSwitchData data)
+        {
             var nextAxis = GetProjectionForCurrent();
-            float planeConst = (nextAxis == Game.Level.ProjectionAxis.FlattenZ) ? seamZ : seamX;
+            float planeConst = (nextAxis == Game.Level.ProjectionAxis.FlattenZ) ? data.seamZ : data.seamX;
             Game.Player.MovePlane newPlane = (nextAxis == Game.Level.ProjectionAxis.FlattenZ) ? Game.Player.MovePlane.X : Game.Player.MovePlane.Z;
             playerAdapter.SetPlayerPlane(newPlane, planeConst);
 
-            // Post-rotation handling using DepenetrationSolver
-            bool liftedPost = depenetrationSolver.ResolveVerticalOverlapUpwards(playerCollider, playerTransform, 
+            // Post-rotation overlap resolution
+            depenetrationSolver.ResolveVerticalOverlapUpwards(playerCollider, playerTransform, 
                 groundMask, penetrationResolveIterations, true);
+        }
 
-            // Use PlayerProjectionAdapter to restore state
-            playerAdapter.RestoreAfterRotation(originalKinematic, jumpOnlyDuringSwitch);
-
-            // Map inertia using PlayerProjectionAdapter
-            Vector3 vFinal = playerAdapter.MapVelocityBetweenAxes(preVel, startAxis, nextAxis);
+        private void RestorePlayerState(PlayerSwitchData data)
+        {
+            playerAdapter.RestoreAfterRotation(data.originalKinematic, jumpOnlyDuringSwitch);
+            
+            var nextAxis = GetProjectionForCurrent();
+            Vector3 vFinal = playerAdapter.MapVelocityBetweenAxes(data.preVel, data.startAxis, nextAxis);
 
             if (playerRb && !playerRb.isKinematic)
             {
                 playerRb.linearVelocity = vFinal;
             }
+        }
 
-            projectionController.CompleteSwitch();
+        // Data structure to hold switch state
+        private class PlayerSwitchData
+        {
+            public int nextIndex;
+            public Vector3 preVel;
+            public bool originalKinematic;
+            public float startYaw;
+            public float targetYaw;
+            public Game.Level.ProjectionAxis startAxis;
+            public float fixedY;
+            public float seamZ;
+            public float seamX;
+            public float xInv;
+            public float zInv;
+            public float preX;
+            public float preZ;
         }
 
         // Vertical-only overlap resolution (delegated to DepenetrationSolver service).
@@ -306,8 +368,6 @@ namespace Game.Projection
             RebuildForCurrentView();
 
             if (!playerTransform) return;
-            if (!player && playerTransform) player = playerTransform.GetComponent<PlayerMotor>();
-            if (!playerCollider && playerTransform) playerCollider = playerTransform.GetComponent<Collider>();
 
             var axis = GetProjectionForCurrent();
             float planeConst = (axis == Game.Level.ProjectionAxis.FlattenZ) ? projectionBuilder.GetPlaneZ() : projectionBuilder.GetPlaneX();

@@ -1,23 +1,13 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using Game.Player;
-using Game.Projection;
-using Game.Preview;
+using Game.Core;
 
 namespace Game.Input
 {
-    // Routes UnityEvents from PlayerInput to gameplay components
+    // Routes UnityEvents from PlayerInput to the decoupled event system
     public class PlayerInputRelay : MonoBehaviour
     {
-        [Tooltip("PlayerMotor component that receives movement and jump commands.")]
-        [SerializeField] private PlayerMotor motor;
-        [Tooltip("PerspectiveProjectionManager used to check if perspective switching is active.")]
-        [SerializeField] private PerspectiveProjectionManager perspective;
-        [Tooltip("StagePreviewManager for 3D preview functionality.")]
-        [SerializeField] private StagePreviewManager stagePreview;
-
         private UnityPlayerInput playerInput;
-        private bool wasInputSuppressed;
 
         private void Awake()
         {
@@ -28,31 +18,15 @@ namespace Game.Input
         {
             // Clear transient flags once per frame
             playerInput?.ClearTransient();
-            
-            // Check if input suppression has ended and forward any held input
-            bool currentlySuppress = perspective != null && perspective.IsSwitching && perspective.JumpOnlyDuringSwitch;
-            if (wasInputSuppressed && !currentlySuppress && playerInput != null)
-            {
-                // Suppression just ended, forward any currently held input
-                motor?.SetMove(playerInput.Move);
-            }
-            wasInputSuppressed = currentlySuppress;
         }
 
         public void OnMove(InputAction.CallbackContext ctx)
         {
             Vector2 moveValue = ctx.ReadValue<Vector2>();
-            
-            // Update adapter state regardless of suppression
             playerInput?.SetMove(moveValue);
             
-            // Suppress lateral input during perspective switching if jump-only mode is enabled
-            if (perspective != null && perspective.IsSwitching && perspective.JumpOnlyDuringSwitch)
-            {
-                return; // Skip forwarding to motor, but jump input remains unaffected
-            }
-            
-            motor?.SetMove(moveValue);
+            // Invoke event for gameplay systems to handle
+            GameInputEvents.InvokeMoveInput(moveValue);
         }
 
         // Handles both performed and canceled so jump-cut works
@@ -61,35 +35,30 @@ namespace Game.Input
             if (ctx.performed)
             {
                 playerInput?.OnJumpPerformed();
-                motor?.QueueJump();
+                GameInputEvents.InvokeJumpPressed();
             }
             else if (ctx.canceled)
             {
                 playerInput?.OnJumpCanceled();
-                motor?.JumpCanceled();
+                GameInputEvents.InvokeJumpReleased();
             }
         }
 
         public void OnSwitchView(InputAction.CallbackContext ctx)
         {
             if (ctx.performed) 
-                perspective?.TogglePerspective();
+                GameInputEvents.InvokeSwitchViewPressed();
         }
 
         public void OnPreview3D(InputAction.CallbackContext ctx)
         {
-            if (!stagePreview) return;
-            
-            // Prevent preview during viewpoint changes
-            if (perspective != null && perspective.IsSwitching) return;
-
             if (ctx.performed)
             {
-                stagePreview.StartPreview();
+                GameInputEvents.InvokePreview3DStarted();
             }
             else if (ctx.canceled)
             {
-                stagePreview.EndPreview();
+                GameInputEvents.InvokePreview3DEnded();
             }
         }
     }
