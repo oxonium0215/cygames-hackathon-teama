@@ -41,7 +41,7 @@ namespace Game.Preview
         [SerializeField] private Transform levelTransform;
 
         [Header("Preview Overlays")]
-        [SerializeField] private Material previewMaterial; // Legacy support
+        [SerializeField] private Material previewMaterial;
         [SerializeField] private Material previewMaterialFlattenZ;
         [SerializeField] private Material previewMaterialFlattenX;
         [SerializeField] private Material gridMaterialFlattenZ;
@@ -286,7 +286,6 @@ namespace Game.Preview
         {
             if (!geometryProjector || !geometryProjector.SourceRoot) return;
 
-            // Use plane-specific materials if available, otherwise fallback to legacy material
             Material flattenZMat = previewMaterialFlattenZ != null ? previewMaterialFlattenZ : previewMaterial;
             Material flattenXMat = previewMaterialFlattenX != null ? previewMaterialFlattenX : previewMaterial;
 
@@ -300,7 +299,6 @@ namespace Game.Preview
                 CreatePlanePreview(ref flattenXPlanePreview, "FlattenX_Preview", ProjectionAxis.FlattenX, flattenXMat);
             }
 
-            // Create grid overlays
             if (gridMaterialFlattenZ)
             {
                 CreateGridOverlay(ref flattenZGridPreview, "FlattenZ_Grid", ProjectionAxis.FlattenZ, gridMaterialFlattenZ);
@@ -325,7 +323,6 @@ namespace Game.Preview
             }
 
             previewObject = new GameObject(name);
-            // Parent to Level instead of this StagePreviewManager
             Transform parentTransform = levelTransform ? levelTransform : transform;
             previewObject.transform.SetParent(parentTransform);
 
@@ -348,7 +345,6 @@ namespace Game.Preview
         {
             if (currentDepth >= maxDepth) return;
             
-            // Skip if original is already a preview object to prevent recursive preview generation
             if (original.name.Contains("Preview")) return;
 
             GameObject clone = new GameObject(original.name + "_Preview");
@@ -357,7 +353,6 @@ namespace Game.Preview
             clone.transform.localPosition = ProjectPosition(original.position, axis);
             clone.transform.localRotation = original.rotation;
             
-            // Set uniform depth size
             Vector3 scale = original.localScale;
             if (axis == ProjectionAxis.FlattenZ)
             {
@@ -384,7 +379,6 @@ namespace Game.Preview
             foreach (Transform child in original)
             {
                 if (child == null) continue;
-                // Skip if child is already a preview object to prevent recursive preview generation
                 if (child.name.Contains("Preview")) continue;
                 CloneObjectForPreviewRecursive(child, clone.transform, axis, planeMaterial, currentDepth + 1, maxDepth);
             }
@@ -414,18 +408,14 @@ namespace Game.Preview
         {
             GameObject gridPlane = new GameObject("GridPlane");
             
-            // Create a simple plane mesh for the grid
             MeshFilter meshFilter = gridPlane.AddComponent<MeshFilter>();
             MeshRenderer meshRenderer = gridPlane.AddComponent<MeshRenderer>();
             
-            // Create a simple quad mesh
             Mesh gridMesh = new Mesh();
             gridMesh.name = "GridMesh";
             
-            // Define grid size based on camera preview size
             float gridSize = previewCameraSize * GRID_SIZE_MULTIPLIER;
             
-            // Create grid vertices
             Vector3[] vertices = new Vector3[4]
             {
                 new Vector3(-gridSize, -gridSize, 0),
@@ -436,10 +426,10 @@ namespace Game.Preview
             
             Vector2[] uv = new Vector2[4]
             {
-                new Vector2(0, 0),
-                new Vector2(gridSize / 2f, 0),
-                new Vector2(gridSize / 2f, gridSize / 2f),
-                new Vector2(0, gridSize / 2f)
+                new Vector2(-gridSize, -gridSize),
+                new Vector2(gridSize, -gridSize),
+                new Vector2(gridSize, gridSize),
+                new Vector2(-gridSize, gridSize)
             };
             
             int[] triangles = new int[6]
@@ -456,19 +446,18 @@ namespace Game.Preview
             meshFilter.mesh = gridMesh;
             meshRenderer.material = gridMaterial;
             
-            // Position the grid on the appropriate plane
             Vector3 gridPosition = Vector3.zero;
             Quaternion gridRotation = Quaternion.identity;
             
             if (axis == ProjectionAxis.FlattenZ)
             {
                 gridPosition.z = geometryProjector.GetPlaneZ();
-                gridRotation = Quaternion.identity; // XY plane
+                gridRotation = Quaternion.identity;
             }
             else if (axis == ProjectionAxis.FlattenX)
             {
                 gridPosition.x = geometryProjector.GetPlaneX();
-                gridRotation = Quaternion.Euler(0, 90, 0); // ZY plane
+                gridRotation = Quaternion.Euler(0, 90, 0);
             }
             
             gridPlane.transform.position = gridPosition;
@@ -529,14 +518,12 @@ namespace Game.Preview
                 playerPreview = null;
             }
 
-            // Check both under Level and under this transform for cleanup
             Transform[] searchTransforms = { levelTransform, transform };
             
             foreach (Transform searchTransform in searchTransforms)
             {
                 if (searchTransform == null) continue;
                 
-                // Use GetComponentsInChildren to find all preview objects in hierarchy
                 Transform[] allChildren = searchTransform.GetComponentsInChildren<Transform>(true);
                 foreach (Transform child in allChildren)
                 {
@@ -553,7 +540,6 @@ namespace Game.Preview
             if (!player) return null;
 
             GameObject previewObj = new GameObject(name);
-            // Parent to Level instead of this StagePreviewManager
             Transform parentTransform = levelTransform ? levelTransform : transform;
             previewObj.transform.SetParent(parentTransform);
             
@@ -580,7 +566,6 @@ namespace Game.Preview
         {
             if (currentDepth >= maxDepth) return;
             
-            // Skip if source is already a preview object to prevent recursive preview generation
             if (source.name.Contains("Preview")) return;
 
             MeshRenderer sourceMeshRenderer = source.GetComponent<MeshRenderer>();
@@ -599,7 +584,6 @@ namespace Game.Preview
             {
                 if (child == null) continue;
                 
-                // Skip if child is already a preview object to prevent recursive preview generation
                 if (child.name.Contains("Preview")) continue;
 
                 MeshRenderer childRenderer = child.GetComponent<MeshRenderer>();
