@@ -670,7 +670,7 @@ namespace Game.Preview
             if (!cameraPivot) return;
 
             // Rotate cameraPivot around its Y-axis
-            float rotationDelta = currentHorizontalInput * CAMERA_ROTATION_SPEED * Time.unscaledDeltaTime;
+            float rotationDelta = -currentHorizontalInput * CAMERA_ROTATION_SPEED * Time.unscaledDeltaTime;
             float newRotationAngle = currentRotationAngle + rotationDelta;
 
             // Clamp rotation angle to limits
