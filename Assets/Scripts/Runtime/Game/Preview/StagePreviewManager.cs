@@ -44,7 +44,7 @@ namespace Game.Preview
         [SerializeField] private Transform cameraPivot;
 
         [Header("Input")]
-        [SerializeField] private Game.Input.PlayerInputRelay playerInputRelay;
+        private MonoBehaviour playerInputRelay;
 
         [Header("Preview Overlays")]
         [SerializeField] private Material previewMaterial;
@@ -84,7 +84,19 @@ namespace Game.Preview
             if (!playerRigidbody && player) playerRigidbody = player.GetComponent<Rigidbody>();
             if (!perspectiveProjectionManager) perspectiveProjectionManager = FindFirstObjectByType<PerspectiveProjectionManager>();
             if (!levelTransform) levelTransform = GameObject.Find("Level")?.transform;
-            if (!playerInputRelay) playerInputRelay = FindFirstObjectByType<Game.Input.PlayerInputRelay>();
+            if (!playerInputRelay)
+            {
+                // Find PlayerInputRelay without assembly dependency
+                var playerInputRelays = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+                foreach (var obj in playerInputRelays)
+                {
+                    if (obj.GetType().Name == "PlayerInputRelay")
+                    {
+                        playerInputRelay = obj;
+                        break;
+                    }
+                }
+            }
             
             // Find cameraPivot from PerspectiveProjectionManager if not assigned
             if (!cameraPivot && perspectiveProjectionManager)
@@ -641,7 +653,9 @@ namespace Game.Preview
             // when exiting preview mode
             if (playerInputRelay != null)
             {
-                playerInputRelay.ClearInputState();
+                // Use reflection to call ClearInputState method to avoid assembly dependency
+                var clearMethod = playerInputRelay.GetType().GetMethod("ClearInputState");
+                clearMethod?.Invoke(playerInputRelay, null);
             }
 
             // Also ensure motor has zero input
