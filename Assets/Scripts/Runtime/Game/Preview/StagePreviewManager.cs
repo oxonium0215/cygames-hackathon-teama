@@ -67,6 +67,7 @@ namespace Game.Preview
         private Vector3 rotationCenter;
         private float currentRotationAngle;
         private float baseDistance;
+        private float currentHorizontalInput;
 
         private void Awake()
         {
@@ -80,7 +81,14 @@ namespace Game.Preview
             if (!levelTransform) levelTransform = GameObject.Find("Level")?.transform;
         }
 
-        private void OnDestroy()
+        private void Update()
+        {
+            // Handle continuous camera rotation during preview
+            if (isPreviewActive && !isTransitioning && Mathf.Abs(currentHorizontalInput) > 0.01f)
+            {
+                ProcessCameraRotation();
+            }
+        }
         {
             DestroyPreviewOverlays();
             
@@ -231,6 +239,9 @@ namespace Game.Preview
         private IEnumerator TransitionFromPreview()
         {
             isTransitioning = true;
+            
+            // Reset camera rotation input
+            currentHorizontalInput = 0f;
 
             DestroyPreviewOverlays();
 
@@ -597,11 +608,16 @@ namespace Game.Preview
 
         public void HandleCameraRotationInput(float horizontalInput)
         {
-            if (!isPreviewActive || isTransitioning) return;
+            // Store the current input value for continuous processing
+            currentHorizontalInput = horizontalInput;
+        }
+
+        private void ProcessCameraRotation()
+        {
             if (!cameraTransform) return;
 
-            // Rotate camera around the center point
-            float rotationDelta = horizontalInput * CAMERA_ROTATION_SPEED * Time.unscaledDeltaTime;
+            // Rotate camera around the center point while maintaining top-down perspective
+            float rotationDelta = currentHorizontalInput * CAMERA_ROTATION_SPEED * Time.unscaledDeltaTime;
             float newRotationAngle = currentRotationAngle + rotationDelta;
             
             // Clamp rotation angle to limits
@@ -621,9 +637,8 @@ namespace Game.Preview
                 
                 cameraTransform.position = newPosition;
                 
-                // Make camera look at the center point
-                Vector3 lookDirection = (rotationCenter - newPosition).normalized;
-                cameraTransform.rotation = Quaternion.LookRotation(lookDirection) * Quaternion.Euler(DEFAULT_CAMERA_ANGLE_X, 0f, 0f);
+                // Keep the camera rotation fixed at the default preview angles to maintain top-down perspective
+                cameraTransform.rotation = Quaternion.Euler(DEFAULT_CAMERA_ANGLE_X, DEFAULT_CAMERA_ANGLE_Y + currentRotationAngle, 0f);
             }
         }
 
