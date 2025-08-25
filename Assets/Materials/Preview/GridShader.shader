@@ -12,14 +12,15 @@ Shader "Custom/GridShader"
         Tags 
         { 
             "RenderType"="Transparent" 
-            "Queue"="Transparent+100"
+            "Queue"="Geometry+500"
             "IgnoreProjector"="True"
         }
         
         LOD 100
         
         Blend SrcAlpha OneMinusSrcAlpha
-        ZWrite Off
+        ZWrite On
+        ZTest LEqual
         Cull Off
         
         Pass
@@ -58,23 +59,27 @@ Shader "Custom/GridShader"
 
             fixed4 frag (v2f i) : SV_Target
             {
-                // Calculate grid coordinates
-                float2 gridUV = i.worldPos.xz * _GridScale;
+                float2 gridUV;
                 
-                // Create grid lines
+                if (abs(unity_ObjectToWorld[0][0]) < 0.1)
+                {
+                    gridUV = i.worldPos.yz * _GridScale;
+                }
+                else
+                {
+                    gridUV = i.worldPos.xz * _GridScale;
+                }
+                
                 float2 grid = abs(frac(gridUV - 0.5) - 0.5) / fwidth(gridUV);
                 float line = min(grid.x, grid.y);
                 
-                // Sharp grid lines
                 float gridLine = 1.0 - min(line, 1.0);
                 gridLine = smoothstep(0.0, _LineWidth, gridLine);
                 
-                // Distance-based fade
                 float3 cameraPos = _WorldSpaceCameraPos;
                 float distance = length(i.worldPos - cameraPos);
                 float fade = 1.0 - saturate(distance / _FadeDistance / 20.0);
                 
-                // Final color with fade
                 fixed4 col = _Color;
                 col.a *= gridLine * fade;
                 

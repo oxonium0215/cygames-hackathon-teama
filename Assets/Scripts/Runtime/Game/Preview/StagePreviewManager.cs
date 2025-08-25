@@ -6,11 +6,6 @@ using Game.Projection;
 
 namespace Game.Preview
 {
-    /// <summary>
-    /// Manages stage preview functionality including camera transitions and preview object generation.
-    /// This component can be attached to any GameObject as it finds its dependencies dynamically.
-    /// For better organization, consider attaching it to the same GameObject as PerspectiveProjectionManager.
-    /// </summary>
     public class StagePreviewManager : MonoBehaviour
     {
         #region Constants
@@ -42,8 +37,8 @@ namespace Game.Preview
 
         [Header("Preview Overlays")]
         [SerializeField] private Material previewMaterial;
-        [SerializeField] private Material previewMaterialFlattenZ;
-        [SerializeField] private Material previewMaterialFlattenX;
+        [SerializeField] private Material wireframeMaterialFlattenZ;
+        [SerializeField] private Material wireframeMaterialFlattenX;
         [SerializeField] private Material gridMaterialFlattenZ;
         [SerializeField] private Material gridMaterialFlattenX;
         [SerializeField] private Material playerPreviewMaterial;
@@ -286,8 +281,8 @@ namespace Game.Preview
         {
             if (!geometryProjector || !geometryProjector.SourceRoot) return;
 
-            Material flattenZMat = previewMaterialFlattenZ != null ? previewMaterialFlattenZ : previewMaterial;
-            Material flattenXMat = previewMaterialFlattenX != null ? previewMaterialFlattenX : previewMaterial;
+            Material flattenZMat = wireframeMaterialFlattenZ != null ? wireframeMaterialFlattenZ : previewMaterial;
+            Material flattenXMat = wireframeMaterialFlattenX != null ? wireframeMaterialFlattenX : previewMaterial;
 
             if (flattenZMat)
             {
