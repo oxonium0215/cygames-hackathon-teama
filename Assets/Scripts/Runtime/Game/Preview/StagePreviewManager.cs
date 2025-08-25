@@ -297,13 +297,11 @@ namespace Game.Preview
             if (gridMaterialFlattenZ)
             {
                 CreateGridOverlay(ref flattenZGridPreview, "FlattenZ_Grid", ProjectionAxis.FlattenZ, gridMaterialFlattenZ);
-                Debug.Log("Created FlattenZ grid overlay");
             }
 
             if (gridMaterialFlattenX)
             {
                 CreateGridOverlay(ref flattenXGridPreview, "FlattenX_Grid", ProjectionAxis.FlattenX, gridMaterialFlattenX);
-                Debug.Log("Created FlattenX grid overlay");
             }
 
             if (playerPreviewMaterial && player)
@@ -459,8 +457,6 @@ namespace Game.Preview
             
             gridPlane.transform.position = gridPosition;
             gridPlane.transform.rotation = gridRotation;
-            
-            Debug.Log($"Created grid plane for {axis}: position {gridPosition}, rotation {gridRotation}");
             
             return gridPlane;
         }
