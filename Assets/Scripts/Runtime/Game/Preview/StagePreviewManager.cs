@@ -50,7 +50,7 @@ namespace Game.Preview
         private Quaternion originalCameraRotation;
         private float originalCameraSize;
         private bool originalOrthographic;
-        
+
         private Vector3 originalPlayerVelocity;
         private Vector3 originalPlayerAngularVelocity;
         private bool wasPlayerMotorEnabled;
@@ -89,9 +89,11 @@ namespace Game.Preview
                 ProcessCameraRotation();
             }
         }
+
+        private void OnDisable()
         {
             DestroyPreviewOverlays();
-            
+
             if (transitionCoroutine != null)
             {
                 StopCoroutine(transitionCoroutine);
@@ -102,17 +104,17 @@ namespace Game.Preview
         {
             if (isPreviewActive || isTransitioning) return;
             if (!ValidateComponents()) return;
-            
+
             // Block if perspective projection is switching OR if we are in preview mode
             if (perspectiveProjectionManager && (perspectiveProjectionManager.IsSwitching || isPreviewActive)) return;
 
             SaveCurrentState();
-            
+
             if (transitionCoroutine != null)
             {
                 StopCoroutine(transitionCoroutine);
             }
-            
+
             transitionCoroutine = StartCoroutine(TransitionToPreview());
         }
 
@@ -120,7 +122,7 @@ namespace Game.Preview
         {
             if (!isPreviewActive || isTransitioning) return;
             if (!ValidateComponents()) return;
-            
+
             // Block if perspective projection is switching
             if (perspectiveProjectionManager && perspectiveProjectionManager.IsSwitching) return;
 
@@ -128,38 +130,38 @@ namespace Game.Preview
             {
                 StopCoroutine(transitionCoroutine);
             }
-            
+
             transitionCoroutine = StartCoroutine(TransitionFromPreview());
         }
 
         private bool ValidateComponents()
         {
             bool isValid = true;
-            
+
             if (!mainCamera)
             {
                 Debug.LogWarning("StagePreviewManager: mainCamera is not assigned");
                 isValid = false;
             }
-            
+
             if (!cameraTransform)
             {
                 Debug.LogWarning("StagePreviewManager: cameraTransform is not assigned");
                 isValid = false;
             }
-            
+
             if (!geometryProjector)
             {
                 Debug.LogWarning("StagePreviewManager: geometryProjector is not assigned");
                 isValid = false;
             }
-            
+
             if (!player)
             {
                 Debug.LogWarning("StagePreviewManager: player is not assigned");
                 isValid = false;
             }
-            
+
             return isValid;
         }
 
@@ -177,7 +179,7 @@ namespace Game.Preview
                 originalPlayerVelocity = playerRigidbody.linearVelocity;
                 originalPlayerAngularVelocity = playerRigidbody.angularVelocity;
             }
-            
+
             if (playerMotor)
             {
                 wasPlayerMotorEnabled = playerMotor.enabled;
@@ -202,7 +204,7 @@ namespace Game.Preview
             }
 
             Quaternion targetRotation = Quaternion.Euler(DEFAULT_CAMERA_ANGLE_X, DEFAULT_CAMERA_ANGLE_Y, 0f);
-            
+
             float elapsed = 0f;
             Vector3 startPos = originalCameraPosition;
             Quaternion startRot = originalCameraRotation;
@@ -239,7 +241,7 @@ namespace Game.Preview
         private IEnumerator TransitionFromPreview()
         {
             isTransitioning = true;
-            
+
             // Reset camera rotation input
             currentHorizontalInput = 0f;
 
@@ -343,7 +345,7 @@ namespace Game.Preview
         private void CloneObjectForPreviewRecursive(Transform original, Transform parent, ProjectionAxis axis, int currentDepth, int maxDepth)
         {
             if (currentDepth >= maxDepth) return;
-            
+
             // Skip if original is already a preview object to prevent recursive preview generation
             if (original.name.Contains("Preview")) return;
 
@@ -352,14 +354,13 @@ namespace Game.Preview
 
             clone.transform.localPosition = ProjectPosition(original.position, axis);
             clone.transform.localRotation = original.rotation;
-            
+
             // Set uniform depth size
             Vector3 scale = original.localScale;
             if (axis == ProjectionAxis.FlattenZ)
             {
                 scale.z = FLATTENED_AXIS_SCALE;
-            }
-            else if (axis == ProjectionAxis.FlattenX)
+            } else if (axis == ProjectionAxis.FlattenX)
             {
                 scale.x = FLATTENED_AXIS_SCALE;
             }
@@ -367,12 +368,12 @@ namespace Game.Preview
 
             MeshRenderer originalRenderer = original.GetComponent<MeshRenderer>();
             MeshFilter originalFilter = original.GetComponent<MeshFilter>();
-            
+
             if (originalRenderer && originalFilter && previewMaterial)
             {
                 MeshRenderer cloneRenderer = clone.AddComponent<MeshRenderer>();
                 MeshFilter cloneFilter = clone.AddComponent<MeshFilter>();
-                
+
                 cloneFilter.mesh = originalFilter.mesh;
                 cloneRenderer.material = previewMaterial;
             }
@@ -389,29 +390,28 @@ namespace Game.Preview
         private Vector3 ProjectPosition(Vector3 position, ProjectionAxis axis)
         {
             Vector3 projected = position;
-            
+
             if (axis == ProjectionAxis.FlattenZ)
             {
                 projected.z = geometryProjector.GetPlaneZ();
-            }
-            else if (axis == ProjectionAxis.FlattenX)
+            } else if (axis == ProjectionAxis.FlattenX)
             {
                 projected.x = geometryProjector.GetPlaneX();
             }
-            
+
             return projected;
         }
 
         private ProjectionAxis GetCurrentProjectionAxis()
         {
             ProjectionAxis currentAxis = ProjectionAxis.FlattenZ;
-            
+
             if (cameraTransform)
             {
                 float yaw = cameraTransform.eulerAngles.y;
                 while (yaw < 0) yaw += 360;
                 while (yaw >= 360) yaw -= 360;
-                
+
                 if (Mathf.Abs(yaw - 270f) < 45f)
                 {
                     currentAxis = ProjectionAxis.FlattenX;
@@ -426,7 +426,7 @@ namespace Game.Preview
             if (!player || !playerPreviewMaterial) return;
 
             CleanupPlayerPreviews();
-            
+
             playerPreview = CreatePlayerPreviewObject("Player_Preview");
         }
 
@@ -440,11 +440,11 @@ namespace Game.Preview
 
             // Check both under Level and under this transform for cleanup
             Transform[] searchTransforms = { levelTransform, transform };
-            
+
             foreach (Transform searchTransform in searchTransforms)
             {
                 if (searchTransform == null) continue;
-                
+
                 // Use GetComponentsInChildren to find all preview objects in hierarchy
                 Transform[] allChildren = searchTransform.GetComponentsInChildren<Transform>(true);
                 foreach (Transform child in allChildren)
@@ -465,9 +465,9 @@ namespace Game.Preview
             // Parent to Level instead of this StagePreviewManager
             Transform parentTransform = levelTransform ? levelTransform : transform;
             previewObj.transform.SetParent(parentTransform);
-            
+
             CopyPlayerVisualComponents(player.gameObject, previewObj);
-            
+
             Vector3 currentPos = player.position;
             Vector3 previewPos = new Vector3(-currentPos.z, currentPos.y, -currentPos.x);
             previewObj.transform.position = previewPos;
@@ -488,18 +488,18 @@ namespace Game.Preview
         private void CopyPlayerVisualComponentsRecursive(GameObject source, GameObject target, int currentDepth, int maxDepth)
         {
             if (currentDepth >= maxDepth) return;
-            
+
             // Skip if source is already a preview object to prevent recursive preview generation
             if (source.name.Contains("Preview")) return;
 
             MeshRenderer sourceMeshRenderer = source.GetComponent<MeshRenderer>();
             MeshFilter sourceMeshFilter = source.GetComponent<MeshFilter>();
-            
+
             if (sourceMeshRenderer && sourceMeshFilter)
             {
                 MeshRenderer targetMeshRenderer = target.AddComponent<MeshRenderer>();
                 MeshFilter targetMeshFilter = target.AddComponent<MeshFilter>();
-                
+
                 targetMeshFilter.mesh = sourceMeshFilter.mesh;
                 targetMeshRenderer.materials = sourceMeshRenderer.materials;
             }
@@ -507,13 +507,13 @@ namespace Game.Preview
             foreach (Transform child in source.transform)
             {
                 if (child == null) continue;
-                
+
                 // Skip if child is already a preview object to prevent recursive preview generation
                 if (child.name.Contains("Preview")) continue;
 
                 MeshRenderer childRenderer = child.GetComponent<MeshRenderer>();
                 MeshFilter childFilter = child.GetComponent<MeshFilter>();
-                
+
                 if (childRenderer || childFilter)
                 {
                     GameObject childCopy = new GameObject(child.name);
@@ -521,7 +521,7 @@ namespace Game.Preview
                     childCopy.transform.localPosition = child.localPosition;
                     childCopy.transform.localRotation = child.localRotation;
                     childCopy.transform.localScale = child.localScale;
-                    
+
                     CopyPlayerVisualComponentsRecursive(child.gameObject, childCopy, currentDepth + 1, maxDepth);
                 }
             }
@@ -535,7 +535,7 @@ namespace Game.Preview
         private void ApplyPreviewMaterialRecursive(GameObject obj, Material previewMat, int currentDepth, int maxDepth)
         {
             if (!previewMat || currentDepth >= maxDepth) return;
-            
+
             Renderer renderer = obj.GetComponent<Renderer>();
             if (renderer)
             {
@@ -595,12 +595,12 @@ namespace Game.Preview
 
             // Set rotation center to player position
             rotationCenter = player.position;
-            
+
             // Calculate base distance from camera to center
             Vector3 cameraPos = cameraTransform.position;
             Vector3 toCameraVector = cameraPos - rotationCenter;
             baseDistance = new Vector3(toCameraVector.x, 0f, toCameraVector.z).magnitude;
-            
+
             // Initialize current rotation angle from camera's Y rotation relative to center
             Vector3 directionToCamera = (cameraPos - rotationCenter).normalized;
             currentRotationAngle = Mathf.Atan2(directionToCamera.x, directionToCamera.z) * Mathf.Rad2Deg;
@@ -619,24 +619,24 @@ namespace Game.Preview
             // Rotate camera around the center point while maintaining top-down perspective
             float rotationDelta = currentHorizontalInput * CAMERA_ROTATION_SPEED * Time.unscaledDeltaTime;
             float newRotationAngle = currentRotationAngle + rotationDelta;
-            
+
             // Clamp rotation angle to limits
             newRotationAngle = Mathf.Clamp(newRotationAngle, MIN_ROTATION_ANGLE, MAX_ROTATION_ANGLE);
-            
+
             // Only update if the angle actually changed (respects limits)
             if (Mathf.Abs(newRotationAngle - currentRotationAngle) > 0.001f)
             {
                 currentRotationAngle = newRotationAngle;
-                
+
                 // Calculate new camera position around the center
                 float angleRad = currentRotationAngle * Mathf.Deg2Rad;
                 Vector3 offset = new Vector3(Mathf.Sin(angleRad) * baseDistance, 0f, Mathf.Cos(angleRad) * baseDistance);
-                
+
                 Vector3 newPosition = rotationCenter + offset;
                 newPosition.y = cameraTransform.position.y; // Keep original height
-                
+
                 cameraTransform.position = newPosition;
-                
+
                 // Keep the camera rotation fixed at the default preview angles to maintain top-down perspective
                 cameraTransform.rotation = Quaternion.Euler(DEFAULT_CAMERA_ANGLE_X, DEFAULT_CAMERA_ANGLE_Y + currentRotationAngle, 0f);
             }
