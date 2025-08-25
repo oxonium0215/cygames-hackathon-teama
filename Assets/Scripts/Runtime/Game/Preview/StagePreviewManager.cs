@@ -22,6 +22,9 @@ namespace Game.Preview
         private const float DEFAULT_CAMERA_ANGLE_X = 30f;
         private const float DEFAULT_CAMERA_ANGLE_Y = -45f;
         private const float FLATTENED_AXIS_SCALE = 2f;
+        private const float CAMERA_ROTATION_SPEED = 90f; // degrees per second
+        private const float MIN_ROTATION_ANGLE = -90f; // left limit
+        private const float MAX_ROTATION_ANGLE = 90f; // right limit
         #endregion
 
         [Header("Camera Settings")]
@@ -59,6 +62,11 @@ namespace Game.Preview
         private GameObject flattenZPlanePreview;
         private GameObject flattenXPlanePreview;
         private GameObject playerPreview;
+
+        // Camera rotation state during preview
+        private Vector3 rotationCenter;
+        private float currentRotationAngle;
+        private float baseDistance;
 
         private void Awake()
         {
@@ -212,6 +220,9 @@ namespace Game.Preview
             mainCamera.orthographicSize = previewCameraSize;
 
             CreatePreviewOverlays();
+
+            // Initialize camera rotation state
+            InitializeCameraRotation();
 
             isPreviewActive = true;
             isTransitioning = false;
@@ -565,6 +576,55 @@ namespace Game.Preview
 
             ProjectionAxis currentAxis = GetCurrentProjectionAxis();
             geometryProjector.Rebuild(currentAxis);
+        }
+
+        private void InitializeCameraRotation()
+        {
+            if (!cameraTransform || !player) return;
+
+            // Set rotation center to player position
+            rotationCenter = player.position;
+            
+            // Calculate base distance from camera to center
+            Vector3 cameraPos = cameraTransform.position;
+            Vector3 toCameraVector = cameraPos - rotationCenter;
+            baseDistance = new Vector3(toCameraVector.x, 0f, toCameraVector.z).magnitude;
+            
+            // Initialize current rotation angle from camera's Y rotation relative to center
+            Vector3 directionToCamera = (cameraPos - rotationCenter).normalized;
+            currentRotationAngle = Mathf.Atan2(directionToCamera.x, directionToCamera.z) * Mathf.Rad2Deg;
+        }
+
+        public void HandleCameraRotationInput(float horizontalInput)
+        {
+            if (!isPreviewActive || isTransitioning) return;
+            if (!cameraTransform) return;
+
+            // Rotate camera around the center point
+            float rotationDelta = horizontalInput * CAMERA_ROTATION_SPEED * Time.unscaledDeltaTime;
+            float newRotationAngle = currentRotationAngle + rotationDelta;
+            
+            // Clamp rotation angle to limits
+            newRotationAngle = Mathf.Clamp(newRotationAngle, MIN_ROTATION_ANGLE, MAX_ROTATION_ANGLE);
+            
+            // Only update if the angle actually changed (respects limits)
+            if (Mathf.Abs(newRotationAngle - currentRotationAngle) > 0.001f)
+            {
+                currentRotationAngle = newRotationAngle;
+                
+                // Calculate new camera position around the center
+                float angleRad = currentRotationAngle * Mathf.Deg2Rad;
+                Vector3 offset = new Vector3(Mathf.Sin(angleRad) * baseDistance, 0f, Mathf.Cos(angleRad) * baseDistance);
+                
+                Vector3 newPosition = rotationCenter + offset;
+                newPosition.y = cameraTransform.position.y; // Keep original height
+                
+                cameraTransform.position = newPosition;
+                
+                // Make camera look at the center point
+                Vector3 lookDirection = (rotationCenter - newPosition).normalized;
+                cameraTransform.rotation = Quaternion.LookRotation(lookDirection) * Quaternion.Euler(DEFAULT_CAMERA_ANGLE_X, 0f, 0f);
+            }
         }
 
         public bool IsPreviewActive => isPreviewActive;

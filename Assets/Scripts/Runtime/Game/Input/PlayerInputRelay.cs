@@ -46,6 +46,13 @@ namespace Game.Input
             // Update adapter state regardless of suppression
             playerInput?.SetMove(moveValue);
             
+            // If preview is active, route horizontal input to camera rotation
+            if (stagePreview != null && stagePreview.IsPreviewActive)
+            {
+                stagePreview.HandleCameraRotationInput(moveValue.x);
+                return; // Don't forward to motor during preview
+            }
+            
             // Suppress lateral input during perspective switching if jump-only mode is enabled
             if (perspective != null && perspective.IsSwitching && perspective.JumpOnlyDuringSwitch)
             {
@@ -85,11 +92,15 @@ namespace Game.Input
 
             if (ctx.performed)
             {
-                stagePreview.StartPreview();
-            }
-            else if (ctx.canceled)
-            {
-                stagePreview.EndPreview();
+                // Toggle preview state
+                if (stagePreview.IsPreviewActive)
+                {
+                    stagePreview.EndPreview();
+                }
+                else
+                {
+                    stagePreview.StartPreview();
+                }
             }
         }
     }
