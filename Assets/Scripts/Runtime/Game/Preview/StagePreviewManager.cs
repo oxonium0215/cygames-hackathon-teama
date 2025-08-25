@@ -43,6 +43,9 @@ namespace Game.Preview
         [SerializeField] private Transform levelTransform;
         [SerializeField] private Transform cameraPivot;
 
+        [Header("Input")]
+        [SerializeField] private Game.Input.PlayerInputRelay playerInputRelay;
+
         [Header("Preview Overlays")]
         [SerializeField] private Material previewMaterial;
         [SerializeField] private Material playerPreviewMaterial;
@@ -81,6 +84,7 @@ namespace Game.Preview
             if (!playerRigidbody && player) playerRigidbody = player.GetComponent<Rigidbody>();
             if (!perspectiveProjectionManager) perspectiveProjectionManager = FindFirstObjectByType<PerspectiveProjectionManager>();
             if (!levelTransform) levelTransform = GameObject.Find("Level")?.transform;
+            if (!playerInputRelay) playerInputRelay = FindFirstObjectByType<Game.Input.PlayerInputRelay>();
             
             // Find cameraPivot from PerspectiveProjectionManager if not assigned
             if (!cameraPivot && perspectiveProjectionManager)
@@ -266,6 +270,9 @@ namespace Game.Preview
             // Reset camera rotation input and angle
             currentHorizontalInput = 0f;
             currentRotationAngle = 0f;
+
+            // Clear any residual input to prevent unwanted player movement
+            ClearPlayerInput();
 
             DestroyPreviewOverlays();
 
@@ -626,6 +633,22 @@ namespace Game.Preview
         {
             // Store the current input value for continuous processing
             currentHorizontalInput = horizontalInput;
+        }
+
+        private void ClearPlayerInput()
+        {
+            // Clear any residual input state to prevent unwanted player movement
+            // when exiting preview mode
+            if (playerInputRelay != null)
+            {
+                playerInputRelay.ClearInputState();
+            }
+
+            // Also ensure motor has zero input
+            if (playerMotor != null)
+            {
+                playerMotor.SetMove(Vector2.zero);
+            }
         }
 
         private void ProcessCameraRotation()

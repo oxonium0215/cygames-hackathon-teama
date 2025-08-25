@@ -103,5 +103,14 @@ namespace Game.Input
                 }
             }
         }
+
+        /// <summary>
+        /// Clears the input state to prevent stale input from causing unwanted player movement.
+        /// Called when exiting preview mode to ensure no residual input remains.
+        /// </summary>
+        public void ClearInputState()
+        {
+            playerInput?.SetMove(Vector2.zero);
+        }
     }
 }
