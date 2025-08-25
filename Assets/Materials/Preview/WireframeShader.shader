@@ -3,8 +3,7 @@ Shader "Custom/WireframeShader"
     Properties
     {
         _Color ("Wireframe Color", Color) = (1,1,1,1)
-        _WireframeWidth ("Wireframe Width", Range(0.0, 10.0)) = 1.0
-        _WireframeSmoothness ("Wireframe Smoothness", Range(0.0, 10.0)) = 1.0
+        _WireThickness ("Wire Thickness", Range(0.0, 0.1)) = 0.02
     }
     SubShader
     {
@@ -27,72 +26,50 @@ Shader "Custom/WireframeShader"
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            #pragma geometry geom
             #include "UnityCG.cginc"
 
             struct appdata
             {
                 float4 vertex : POSITION;
-                float3 normal : NORMAL;
+                float2 uv : TEXCOORD0;
             };
 
-            struct v2g
-            {
-                float4 vertex : POSITION;
-                float3 normal : NORMAL;
-            };
-
-            struct g2f
+            struct v2f
             {
                 float4 vertex : SV_POSITION;
-                float3 barycentric : TEXCOORD0;
+                float2 uv : TEXCOORD0;
+                float3 worldPos : TEXCOORD1;
             };
 
             fixed4 _Color;
-            float _WireframeWidth;
-            float _WireframeSmoothness;
+            float _WireThickness;
 
-            v2g vert (appdata v)
+            v2f vert (appdata v)
             {
-                v2g o;
+                v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex);
-                o.normal = UnityObjectToWorldNormal(v.normal);
+                o.uv = v.uv;
+                o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
                 return o;
             }
 
-            [maxvertexcount(3)]
-            void geom(triangle v2g input[3], inout TriangleStream<g2f> outStream)
+            fixed4 frag (v2f i) : SV_Target
             {
-                g2f output;
+                // Create wireframe effect using UV coordinates
+                float2 grid = abs(frac(i.uv * 20.0) - 0.5) / fwidth(i.uv * 20.0);
+                float line = min(grid.x, grid.y);
                 
-                output.vertex = input[0].vertex;
-                output.barycentric = float3(1, 0, 0);
-                outStream.Append(output);
+                // Create wireframe lines
+                float wireframe = 1.0 - min(line, 1.0);
+                wireframe = smoothstep(0.0, _WireThickness * 100.0, wireframe);
                 
-                output.vertex = input[1].vertex;
-                output.barycentric = float3(0, 1, 0);
-                outStream.Append(output);
-                
-                output.vertex = input[2].vertex;
-                output.barycentric = float3(0, 0, 1);
-                outStream.Append(output);
-                
-                outStream.RestartStrip();
-            }
-
-            fixed4 frag (g2f i) : SV_Target
-            {
-                // Calculate wireframe
-                float3 barys = i.barycentric;
-                float3 deltas = fwidth(barys);
-                float3 smoothing = deltas * _WireframeSmoothness;
-                float3 thickness = deltas * _WireframeWidth;
-                
-                barys = smoothstep(thickness, thickness + smoothing, barys);
-                float minBary = min(barys.x, min(barys.y, barys.z));
+                // Distance fade
+                float3 cameraPos = _WorldSpaceCameraPos;
+                float distance = length(i.worldPos - cameraPos);
+                float fade = 1.0 - saturate(distance / 50.0);
                 
                 fixed4 col = _Color;
-                col.a *= (1.0 - minBary);
+                col.a *= wireframe * fade;
                 
                 return col;
             }

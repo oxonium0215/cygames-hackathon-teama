@@ -27,8 +27,7 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _WireframeWidth: 2.0
-    - _WireframeSmoothness: 1.5
+    - _WireThickness: 0.02
     m_Colors:
     - _Color: {r: 0.3, g: 0.9, b: 1, a: 0.9}
   m_BuildTextureStacks: []
