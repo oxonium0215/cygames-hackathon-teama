@@ -266,10 +266,6 @@ namespace Game.Preview
             // Reset camera rotation input and angle
             currentHorizontalInput = 0f;
             currentRotationAngle = 0f;
-            
-            // Restore original cameraPivot rotation
-            if (cameraPivot)
-                cameraPivot.rotation = originalCameraPivotRotation;
 
             DestroyPreviewOverlays();
 
@@ -277,6 +273,9 @@ namespace Game.Preview
             Vector3 startPos = cameraTransform.position;
             Quaternion startRot = cameraTransform.rotation;
             float startSize = mainCamera.orthographicSize;
+            
+            // Store current cameraPivot rotation for smooth transition
+            Quaternion startCameraPivotRot = cameraPivot ? cameraPivot.rotation : Quaternion.identity;
 
             while (elapsed < transitionDuration)
             {
@@ -287,6 +286,10 @@ namespace Game.Preview
                 cameraTransform.position = Vector3.Lerp(startPos, originalCameraPosition, curveT);
                 cameraTransform.rotation = Quaternion.Slerp(startRot, originalCameraRotation, curveT);
                 mainCamera.orthographicSize = Mathf.Lerp(startSize, originalCameraSize, curveT);
+                
+                // Smoothly restore cameraPivot rotation simultaneously
+                if (cameraPivot)
+                    cameraPivot.rotation = Quaternion.Slerp(startCameraPivotRot, originalCameraPivotRotation, curveT);
 
                 yield return null;
             }
@@ -295,6 +298,10 @@ namespace Game.Preview
             cameraTransform.rotation = originalCameraRotation;
             mainCamera.orthographicSize = originalCameraSize;
             mainCamera.orthographic = originalOrthographic;
+            
+            // Ensure cameraPivot rotation is exactly restored
+            if (cameraPivot)
+                cameraPivot.rotation = originalCameraPivotRotation;
 
             RestorePlayerPhysics();
             ReprojectGeometry();
