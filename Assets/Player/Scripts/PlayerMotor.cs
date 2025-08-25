@@ -163,8 +163,6 @@ namespace Game.Player
 
         private void Update()
         {
-            UpdateGroundCheckPoseAndSize();
-
             if (rotationFrozen)
             {
                 return;
@@ -176,6 +174,8 @@ namespace Game.Player
 
         private void FixedUpdate()
         {
+            UpdateGroundCheckPoseAndSize();
+            
             // Do nothing while rotating; the manager drives transform/overlaps.
             if (rotationFrozen) return;
 
