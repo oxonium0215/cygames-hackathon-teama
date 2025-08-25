@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &4617569172991423822
+--- !u!1 &2165144450594163774
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,14 +8,14 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 4928711891243031639}
-  - component: {fileID: 7065737881627265760}
-  - component: {fileID: 2922977902485687243}
-  - component: {fileID: 9023043515588502024}
-  - component: {fileID: 6895058598325519597}
-  - component: {fileID: 5036998678621237770}
-  - component: {fileID: 3738100737907857709}
-  - component: {fileID: 2601280002999035914}
+  - component: {fileID: 4276758695946889830}
+  - component: {fileID: 1338206608731020930}
+  - component: {fileID: 7351403548058370351}
+  - component: {fileID: 6493211531045182131}
+  - component: {fileID: 7698790569749947639}
+  - component: {fileID: 584307060416105758}
+  - component: {fileID: 2419150566568800582}
+  - component: {fileID: 6181537637692255776}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -23,13 +23,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &4928711891243031639
+--- !u!4 &4276758695946889830
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4617569172991423822}
+  m_GameObject: {fileID: 2165144450594163774}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -4.8, y: -1.87, z: -7.5}
@@ -38,21 +38,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &7065737881627265760
+--- !u!33 &1338206608731020930
 MeshFilter:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4617569172991423822}
+  m_GameObject: {fileID: 2165144450594163774}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
---- !u!23 &2922977902485687243
+--- !u!23 &7351403548058370351
 MeshRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4617569172991423822}
+  m_GameObject: {fileID: 2165144450594163774}
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
@@ -94,13 +94,13 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &9023043515588502024
+--- !u!65 &6493211531045182131
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4617569172991423822}
+  m_GameObject: {fileID: 2165144450594163774}
   m_Material: {fileID: 13400000, guid: 6a8f2fe526b3fd645a234b5779831fca, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
@@ -115,13 +115,13 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!54 &6895058598325519597
+--- !u!54 &7698790569749947639
 Rigidbody:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4617569172991423822}
+  m_GameObject: {fileID: 2165144450594163774}
   serializedVersion: 5
   m_Mass: 1
   m_LinearDamping: 0
@@ -140,15 +140,15 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 112
+  m_Constraints: 80
   m_CollisionDetection: 1
---- !u!114 &5036998678621237770
+--- !u!114 &584307060416105758
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4617569172991423822}
+  m_GameObject: {fileID: 2165144450594163774}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 62899f850307741f2a39c98a8b639597, type: 3}
@@ -169,8 +169,8 @@ MonoBehaviour:
   m_ActionEvents:
   - m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 2601280002999035914}
-        m_TargetAssemblyTypeName: POC.Input.PlayerInputRouter, Assembly-CSharp
+      - m_Target: {fileID: 6181537637692255776}
+        m_TargetAssemblyTypeName: Game.Input.PlayerInputRelay, Game.Input
         m_MethodName: OnMove
         m_Mode: 0
         m_Arguments:
@@ -185,8 +185,8 @@ MonoBehaviour:
     m_ActionName: 'Gameplay/Move[/Keyboard/w,/Keyboard/s,/Keyboard/a,/Keyboard/d]'
   - m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 2601280002999035914}
-        m_TargetAssemblyTypeName: POC.Input.PlayerInputRouter, Assembly-CSharp
+      - m_Target: {fileID: 6181537637692255776}
+        m_TargetAssemblyTypeName: Game.Input.PlayerInputRelay, Game.Input
         m_MethodName: OnJump
         m_Mode: 0
         m_Arguments:
@@ -201,8 +201,8 @@ MonoBehaviour:
     m_ActionName: 'Gameplay/Jump[/Keyboard/space]'
   - m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 2601280002999035914}
-        m_TargetAssemblyTypeName: POC.Input.PlayerInputRouter, Assembly-CSharp
+      - m_Target: {fileID: 6181537637692255776}
+        m_TargetAssemblyTypeName: Game.Input.PlayerInputRelay, Game.Input
         m_MethodName: OnSwitchView
         m_Mode: 0
         m_Arguments:
@@ -215,18 +215,34 @@ MonoBehaviour:
         m_CallState: 2
     m_ActionId: d2e17c6d-f9dc-415f-a6b9-bde72ac28a03
     m_ActionName: 'Gameplay/SwitchView[/Keyboard/q,/Keyboard/e]'
+  - m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 6181537637692255776}
+        m_TargetAssemblyTypeName: Game.Input.PlayerInputRelay, Game.Input
+        m_MethodName: OnPreview3D
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+    m_ActionId: f3a5b2c8-e1d4-4a8f-9b6c-3e7d8a9f0c1b
+    m_ActionName: 'Gameplay/Preview3D[/Keyboard/v]'
   m_NeverAutoSwitchControlSchemes: 0
   m_DefaultControlScheme: 
   m_DefaultActionMap: Gameplay
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
---- !u!114 &3738100737907857709
+--- !u!114 &2419150566568800582
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4617569172991423822}
+  m_GameObject: {fileID: 2165144450594163774}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 140ddc52657c85947b5e72708c20853b, type: 3}
@@ -255,17 +271,18 @@ MonoBehaviour:
     m_Bits: 8
   groundCheckSkin: 0.02
   autoSizeGroundCheck: 1
---- !u!114 &2601280002999035914
+--- !u!114 &6181537637692255776
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4617569172991423822}
+  m_GameObject: {fileID: 2165144450594163774}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f9663212a0dda8441becc63b5cfc96e3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  motor: {fileID: 3738100737907857709}
+  motor: {fileID: 2419150566568800582}
   perspective: {fileID: 0}
+  stagePreview: {fileID: 0}
