@@ -22,6 +22,9 @@ namespace Game.Preview
         private const float DEFAULT_CAMERA_ANGLE_X = 30f;
         private const float DEFAULT_CAMERA_ANGLE_Y = -45f;
         private const float FLATTENED_AXIS_SCALE = 2f;
+        private const float CAMERA_ROTATION_SPEED = 90f; // degrees per second
+        private const float MIN_ROTATION_ANGLE = -90f; // left limit
+        private const float MAX_ROTATION_ANGLE = 90f; // right limit
         #endregion
 
         [Header("Camera Settings")]
@@ -38,6 +41,10 @@ namespace Game.Preview
         [SerializeField] private Rigidbody playerRigidbody;
         [SerializeField] private PerspectiveProjectionManager perspectiveProjectionManager;
         [SerializeField] private Transform levelTransform;
+        [SerializeField] private Transform cameraPivot;
+
+        [Header("Input")]
+        private MonoBehaviour playerInputRelay;
 
         [Header("Preview Overlays")]
         [SerializeField] private Material previewMaterial;
@@ -48,6 +55,9 @@ namespace Game.Preview
         private float originalCameraSize;
         private bool originalOrthographic;
         
+        // Store original cameraPivot rotation for restoration
+        private Quaternion originalCameraPivotRotation;
+
         private Vector3 originalPlayerVelocity;
         private Vector3 originalPlayerAngularVelocity;
         private bool wasPlayerMotorEnabled;
@@ -60,6 +70,10 @@ namespace Game.Preview
         private GameObject flattenXPlanePreview;
         private GameObject playerPreview;
 
+        // Camera rotation state during preview - simplified for cameraPivot approach
+        private float currentRotationAngle;
+        private float currentHorizontalInput;
+
         private void Awake()
         {
             if (!mainCamera) mainCamera = Camera.main;
@@ -70,12 +84,43 @@ namespace Game.Preview
             if (!playerRigidbody && player) playerRigidbody = player.GetComponent<Rigidbody>();
             if (!perspectiveProjectionManager) perspectiveProjectionManager = FindFirstObjectByType<PerspectiveProjectionManager>();
             if (!levelTransform) levelTransform = GameObject.Find("Level")?.transform;
+            if (!playerInputRelay)
+            {
+                // Find PlayerInputRelay without assembly dependency
+                var playerInputRelays = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+                foreach (var obj in playerInputRelays)
+                {
+                    if (obj.GetType().Name == "PlayerInputRelay")
+                    {
+                        playerInputRelay = obj;
+                        break;
+                    }
+                }
+            }
+            
+            // Find cameraPivot from PerspectiveProjectionManager if not assigned
+            if (!cameraPivot && perspectiveProjectionManager)
+            {
+                var pivotField = perspectiveProjectionManager.GetType().GetField("cameraPivot", 
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (pivotField != null)
+                    cameraPivot = pivotField.GetValue(perspectiveProjectionManager) as Transform;
+            }
         }
 
-        private void OnDestroy()
+        private void Update()
+        {
+            // Handle continuous camera rotation during preview
+            if (isPreviewActive && !isTransitioning && Mathf.Abs(currentHorizontalInput) > 0.01f)
+            {
+                ProcessCameraRotation();
+            }
+        }
+
+        private void OnDisable()
         {
             DestroyPreviewOverlays();
-            
+
             if (transitionCoroutine != null)
             {
                 StopCoroutine(transitionCoroutine);
@@ -86,17 +131,17 @@ namespace Game.Preview
         {
             if (isPreviewActive || isTransitioning) return;
             if (!ValidateComponents()) return;
-            
+
             // Block if perspective projection is switching OR if we are in preview mode
             if (perspectiveProjectionManager && (perspectiveProjectionManager.IsSwitching || isPreviewActive)) return;
 
             SaveCurrentState();
-            
+
             if (transitionCoroutine != null)
             {
                 StopCoroutine(transitionCoroutine);
             }
-            
+
             transitionCoroutine = StartCoroutine(TransitionToPreview());
         }
 
@@ -104,7 +149,7 @@ namespace Game.Preview
         {
             if (!isPreviewActive || isTransitioning) return;
             if (!ValidateComponents()) return;
-            
+
             // Block if perspective projection is switching
             if (perspectiveProjectionManager && perspectiveProjectionManager.IsSwitching) return;
 
@@ -112,38 +157,44 @@ namespace Game.Preview
             {
                 StopCoroutine(transitionCoroutine);
             }
-            
+
             transitionCoroutine = StartCoroutine(TransitionFromPreview());
         }
 
         private bool ValidateComponents()
         {
             bool isValid = true;
-            
+
             if (!mainCamera)
             {
                 Debug.LogWarning("StagePreviewManager: mainCamera is not assigned");
                 isValid = false;
             }
-            
+
             if (!cameraTransform)
             {
                 Debug.LogWarning("StagePreviewManager: cameraTransform is not assigned");
                 isValid = false;
             }
-            
+
             if (!geometryProjector)
             {
                 Debug.LogWarning("StagePreviewManager: geometryProjector is not assigned");
                 isValid = false;
             }
-            
+
             if (!player)
             {
                 Debug.LogWarning("StagePreviewManager: player is not assigned");
                 isValid = false;
             }
             
+            if (!cameraPivot)
+            {
+                Debug.LogWarning("StagePreviewManager: cameraPivot is not assigned - camera rotation will not work");
+                // Don't mark as invalid since the rest of the functionality should still work
+            }
+
             return isValid;
         }
 
@@ -155,13 +206,17 @@ namespace Game.Preview
             originalCameraRotation = cameraTransform.rotation;
             originalCameraSize = mainCamera.orthographicSize;
             originalOrthographic = mainCamera.orthographic;
+            
+            // Save original cameraPivot rotation for restoration
+            if (cameraPivot)
+                originalCameraPivotRotation = cameraPivot.rotation;
 
             if (playerRigidbody)
             {
                 originalPlayerVelocity = playerRigidbody.linearVelocity;
                 originalPlayerAngularVelocity = playerRigidbody.angularVelocity;
             }
-            
+
             if (playerMotor)
             {
                 wasPlayerMotorEnabled = playerMotor.enabled;
@@ -186,7 +241,7 @@ namespace Game.Preview
             }
 
             Quaternion targetRotation = Quaternion.Euler(DEFAULT_CAMERA_ANGLE_X, DEFAULT_CAMERA_ANGLE_Y, 0f);
-            
+
             float elapsed = 0f;
             Vector3 startPos = originalCameraPosition;
             Quaternion startRot = originalCameraRotation;
@@ -213,6 +268,9 @@ namespace Game.Preview
 
             CreatePreviewOverlays();
 
+            // Initialize camera rotation state for cameraPivot approach
+            currentRotationAngle = 0f;
+
             isPreviewActive = true;
             isTransitioning = false;
         }
@@ -221,12 +279,22 @@ namespace Game.Preview
         {
             isTransitioning = true;
 
+            // Reset camera rotation input and angle
+            currentHorizontalInput = 0f;
+            currentRotationAngle = 0f;
+
+            // Clear any residual input to prevent unwanted player movement
+            ClearPlayerInput();
+
             DestroyPreviewOverlays();
 
             float elapsed = 0f;
             Vector3 startPos = cameraTransform.position;
             Quaternion startRot = cameraTransform.rotation;
             float startSize = mainCamera.orthographicSize;
+            
+            // Store current cameraPivot rotation for smooth transition
+            Quaternion startCameraPivotRot = cameraPivot ? cameraPivot.rotation : Quaternion.identity;
 
             while (elapsed < transitionDuration)
             {
@@ -237,6 +305,10 @@ namespace Game.Preview
                 cameraTransform.position = Vector3.Lerp(startPos, originalCameraPosition, curveT);
                 cameraTransform.rotation = Quaternion.Slerp(startRot, originalCameraRotation, curveT);
                 mainCamera.orthographicSize = Mathf.Lerp(startSize, originalCameraSize, curveT);
+                
+                // Smoothly restore cameraPivot rotation simultaneously
+                if (cameraPivot)
+                    cameraPivot.rotation = Quaternion.Slerp(startCameraPivotRot, originalCameraPivotRotation, curveT);
 
                 yield return null;
             }
@@ -245,6 +317,10 @@ namespace Game.Preview
             cameraTransform.rotation = originalCameraRotation;
             mainCamera.orthographicSize = originalCameraSize;
             mainCamera.orthographic = originalOrthographic;
+            
+            // Ensure cameraPivot rotation is exactly restored
+            if (cameraPivot)
+                cameraPivot.rotation = originalCameraPivotRotation;
 
             RestorePlayerPhysics();
             ReprojectGeometry();
@@ -321,7 +397,7 @@ namespace Game.Preview
         private void CloneObjectForPreviewRecursive(Transform original, Transform parent, ProjectionAxis axis, int currentDepth, int maxDepth)
         {
             if (currentDepth >= maxDepth) return;
-            
+
             // Skip if original is already a preview object to prevent recursive preview generation
             if (original.name.Contains("Preview")) return;
 
@@ -330,14 +406,13 @@ namespace Game.Preview
 
             clone.transform.localPosition = ProjectPosition(original.position, axis);
             clone.transform.localRotation = original.rotation;
-            
+
             // Set uniform depth size
             Vector3 scale = original.localScale;
             if (axis == ProjectionAxis.FlattenZ)
             {
                 scale.z = FLATTENED_AXIS_SCALE;
-            }
-            else if (axis == ProjectionAxis.FlattenX)
+            } else if (axis == ProjectionAxis.FlattenX)
             {
                 scale.x = FLATTENED_AXIS_SCALE;
             }
@@ -345,12 +420,12 @@ namespace Game.Preview
 
             MeshRenderer originalRenderer = original.GetComponent<MeshRenderer>();
             MeshFilter originalFilter = original.GetComponent<MeshFilter>();
-            
+
             if (originalRenderer && originalFilter && previewMaterial)
             {
                 MeshRenderer cloneRenderer = clone.AddComponent<MeshRenderer>();
                 MeshFilter cloneFilter = clone.AddComponent<MeshFilter>();
-                
+
                 cloneFilter.mesh = originalFilter.mesh;
                 cloneRenderer.material = previewMaterial;
             }
@@ -367,29 +442,28 @@ namespace Game.Preview
         private Vector3 ProjectPosition(Vector3 position, ProjectionAxis axis)
         {
             Vector3 projected = position;
-            
+
             if (axis == ProjectionAxis.FlattenZ)
             {
                 projected.z = geometryProjector.GetPlaneZ();
-            }
-            else if (axis == ProjectionAxis.FlattenX)
+            } else if (axis == ProjectionAxis.FlattenX)
             {
                 projected.x = geometryProjector.GetPlaneX();
             }
-            
+
             return projected;
         }
 
         private ProjectionAxis GetCurrentProjectionAxis()
         {
             ProjectionAxis currentAxis = ProjectionAxis.FlattenZ;
-            
+
             if (cameraTransform)
             {
                 float yaw = cameraTransform.eulerAngles.y;
                 while (yaw < 0) yaw += 360;
                 while (yaw >= 360) yaw -= 360;
-                
+
                 if (Mathf.Abs(yaw - 270f) < 45f)
                 {
                     currentAxis = ProjectionAxis.FlattenX;
@@ -404,7 +478,7 @@ namespace Game.Preview
             if (!player || !playerPreviewMaterial) return;
 
             CleanupPlayerPreviews();
-            
+
             playerPreview = CreatePlayerPreviewObject("Player_Preview");
         }
 
@@ -418,11 +492,11 @@ namespace Game.Preview
 
             // Check both under Level and under this transform for cleanup
             Transform[] searchTransforms = { levelTransform, transform };
-            
+
             foreach (Transform searchTransform in searchTransforms)
             {
                 if (searchTransform == null) continue;
-                
+
                 // Use GetComponentsInChildren to find all preview objects in hierarchy
                 Transform[] allChildren = searchTransform.GetComponentsInChildren<Transform>(true);
                 foreach (Transform child in allChildren)
@@ -443,9 +517,9 @@ namespace Game.Preview
             // Parent to Level instead of this StagePreviewManager
             Transform parentTransform = levelTransform ? levelTransform : transform;
             previewObj.transform.SetParent(parentTransform);
-            
+
             CopyPlayerVisualComponents(player.gameObject, previewObj);
-            
+
             Vector3 currentPos = player.position;
             Vector3 previewPos = new Vector3(-currentPos.z, currentPos.y, -currentPos.x);
             previewObj.transform.position = previewPos;
@@ -466,18 +540,18 @@ namespace Game.Preview
         private void CopyPlayerVisualComponentsRecursive(GameObject source, GameObject target, int currentDepth, int maxDepth)
         {
             if (currentDepth >= maxDepth) return;
-            
+
             // Skip if source is already a preview object to prevent recursive preview generation
             if (source.name.Contains("Preview")) return;
 
             MeshRenderer sourceMeshRenderer = source.GetComponent<MeshRenderer>();
             MeshFilter sourceMeshFilter = source.GetComponent<MeshFilter>();
-            
+
             if (sourceMeshRenderer && sourceMeshFilter)
             {
                 MeshRenderer targetMeshRenderer = target.AddComponent<MeshRenderer>();
                 MeshFilter targetMeshFilter = target.AddComponent<MeshFilter>();
-                
+
                 targetMeshFilter.mesh = sourceMeshFilter.mesh;
                 targetMeshRenderer.materials = sourceMeshRenderer.materials;
             }
@@ -485,13 +559,13 @@ namespace Game.Preview
             foreach (Transform child in source.transform)
             {
                 if (child == null) continue;
-                
+
                 // Skip if child is already a preview object to prevent recursive preview generation
                 if (child.name.Contains("Preview")) continue;
 
                 MeshRenderer childRenderer = child.GetComponent<MeshRenderer>();
                 MeshFilter childFilter = child.GetComponent<MeshFilter>();
-                
+
                 if (childRenderer || childFilter)
                 {
                     GameObject childCopy = new GameObject(child.name);
@@ -499,7 +573,7 @@ namespace Game.Preview
                     childCopy.transform.localPosition = child.localPosition;
                     childCopy.transform.localRotation = child.localRotation;
                     childCopy.transform.localScale = child.localScale;
-                    
+
                     CopyPlayerVisualComponentsRecursive(child.gameObject, childCopy, currentDepth + 1, maxDepth);
                 }
             }
@@ -513,7 +587,7 @@ namespace Game.Preview
         private void ApplyPreviewMaterialRecursive(GameObject obj, Material previewMat, int currentDepth, int maxDepth)
         {
             if (!previewMat || currentDepth >= maxDepth) return;
-            
+
             Renderer renderer = obj.GetComponent<Renderer>();
             if (renderer)
             {
@@ -565,6 +639,53 @@ namespace Game.Preview
 
             ProjectionAxis currentAxis = GetCurrentProjectionAxis();
             geometryProjector.Rebuild(currentAxis);
+        }
+
+        public void HandleCameraRotationInput(float horizontalInput)
+        {
+            // Store the current input value for continuous processing
+            currentHorizontalInput = horizontalInput;
+        }
+
+        private void ClearPlayerInput()
+        {
+            // Clear any residual input state to prevent unwanted player movement
+            // when exiting preview mode
+            if (playerInputRelay != null)
+            {
+                // Use reflection to call ClearInputState method to avoid assembly dependency
+                var clearMethod = playerInputRelay.GetType().GetMethod("ClearInputState");
+                clearMethod?.Invoke(playerInputRelay, null);
+            }
+
+            // Also ensure motor has zero input
+            if (playerMotor != null)
+            {
+                playerMotor.SetMove(Vector2.zero);
+            }
+        }
+
+        private void ProcessCameraRotation()
+        {
+            if (!cameraPivot) return;
+
+            // Rotate cameraPivot around its Y-axis
+            float rotationDelta = -currentHorizontalInput * CAMERA_ROTATION_SPEED * Time.unscaledDeltaTime;
+            float newRotationAngle = currentRotationAngle + rotationDelta;
+
+            // Clamp rotation angle to limits
+            newRotationAngle = Mathf.Clamp(newRotationAngle, MIN_ROTATION_ANGLE, MAX_ROTATION_ANGLE);
+
+            // Only update if the angle actually changed (respects limits)
+            if (Mathf.Abs(newRotationAngle - currentRotationAngle) > 0.001f)
+            {
+                currentRotationAngle = newRotationAngle;
+
+                // Apply rotation to cameraPivot on Y-axis
+                Vector3 eulerAngles = originalCameraPivotRotation.eulerAngles;
+                eulerAngles.y += currentRotationAngle;
+                cameraPivot.rotation = Quaternion.Euler(eulerAngles);
+            }
         }
 
         public bool IsPreviewActive => isPreviewActive;
