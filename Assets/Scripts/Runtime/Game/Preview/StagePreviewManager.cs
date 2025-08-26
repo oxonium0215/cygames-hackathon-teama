@@ -70,7 +70,7 @@ namespace Game.Preview
         private GameObject flattenXPlanePreview;
         private GameObject playerPreview;
 
-        // Camera rotation state during preview - simplified for cameraPivot approach
+        // Camera rotation state during preview
         private float currentRotationAngle;
         private float currentHorizontalInput;
 

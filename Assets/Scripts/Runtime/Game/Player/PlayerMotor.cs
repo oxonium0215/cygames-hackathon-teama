@@ -20,6 +20,11 @@ namespace Game.Player
         [SerializeField] private float coyoteTime = 0.1f;
         [SerializeField] private float jumpBufferTime = 0.1f;
 
+        [Header("Spring Jumping")]
+
+        [SerializeField] private LayerMask _springMask;
+        [SerializeField] private float _springJumpHeight = 9.5f;
+
         [Header("Gravity")]
         [SerializeField] private float gravity = -40f;
         [SerializeField] private float groundStickForce = 5f;
@@ -40,7 +45,7 @@ namespace Game.Player
 
         private Rigidbody rb;
         private Collider col;
-        
+
         // Cached objects to reduce GC allocations in FixedUpdate/Update
         private Vector3 tempVector3;
         private Bounds cachedBounds;
@@ -65,12 +70,15 @@ namespace Game.Player
 
         // Rotation freeze (no gravity/inertia/velocity changes while true)
         private bool rotationFrozen;
-        
+
         // Cache for last velocity Y (for landing slide detection)
         private float lastVelY;
 
         public bool IsGrounded => groundProbe?.IsGrounded ?? false;
+        public bool OnSpring => groundProbe?.OnSpring ?? false;
         private float JumpVelocity => Mathf.Sqrt(2f * Mathf.Abs(gravity) * Mathf.Max(0.0001f, jumpHeight));
+        private float SpringJumpVelocity => Mathf.Sqrt(2f * Mathf.Abs(gravity) * Mathf.Max(0.0001f, _springJumpHeight));
+        private bool _autoJump = true;
 
         public MovePlane ActivePlane
         {
@@ -120,10 +128,10 @@ namespace Game.Player
             EnsureGroundCheckExists();
             UpdateGroundCheckPoseAndSize();
             ApplyAxisConstraints();
-            
+
             // Initialize services
             groundProbe = new GroundProbe(coyoteTime);
-            planeMotion = new PlaneMotion(enableLandingSlide, landingSlideDuration, 
+            planeMotion = new PlaneMotion(enableLandingSlide, landingSlideDuration,
                 landingAccelMultiplier, landingDecelMultiplier);
         }
 
@@ -147,6 +155,7 @@ namespace Game.Player
             if (rotationFrozen) return;
             jumpQueued = true;
             jumpHeld = true;
+            _autoJump = false;
             groundProbe?.SetJumpBuffer(jumpBufferTime);
         }
 
@@ -154,11 +163,20 @@ namespace Game.Player
         {
             if (rotationFrozen) return;
             var v = rb.linearVelocity;
+            _autoJump = true;
             if (v.y > 0f)
             {
                 v.y *= jumpCutMultiplier;
                 rb.linearVelocity = v;
             }
+        }
+
+        private void AutoJump()
+        {
+            if (rotationFrozen) return;
+            jumpQueued = true;
+            jumpHeld = true;
+            groundProbe?.SetJumpBuffer(jumpBufferTime);
         }
 
         private void Update()
@@ -171,13 +189,22 @@ namespace Game.Player
             }
 
             // Update ground probe (handles coyote time and jump buffer timing)
-            groundProbe?.UpdateGroundCheck(groundCheck.position, groundCheckRadius, groundMask, Time.deltaTime);
+            groundProbe?.UpdateGroundCheck(groundCheck.position, groundCheckRadius, groundMask, _springMask, Time.deltaTime);
         }
 
         private void FixedUpdate()
         {
             // Do nothing while rotating; the manager drives transform/overlaps.
             if (rotationFrozen) return;
+
+            if (_autoJump && OnSpring)
+            {
+                AutoJump();
+            }
+            else if (!_autoJump && OnSpring)
+            {
+                QueueJump();
+            }
 
             // Keep on plane always
             if (planeLockEnabled)
@@ -200,7 +227,8 @@ namespace Game.Player
                         tempVector3.z = 0f;
                         rb.linearVelocity = tempVector3;
                     }
-                } else
+                }
+                else
                 {
                     if (!Mathf.Approximately(pos.x, planeLockValue))
                     {
@@ -227,7 +255,7 @@ namespace Game.Player
 
             // Apply lateral movement through PlaneMotion service
             v = planeMotion?.ApplyLateralMovement(moveInput, activePlane, maxRunSpeed, v, IsGrounded,
-                groundAcceleration, airAcceleration, groundDeceleration, airDeceleration, 
+                groundAcceleration, airAcceleration, groundDeceleration, airDeceleration,
                 Time.fixedDeltaTime, lateralEnabled) ?? v;
 
             // Gravity + stick
@@ -238,7 +266,14 @@ namespace Game.Player
             // Buffered jump + coyote (using GroundProbe service)
             if (groundProbe != null && groundProbe.CanJump())
             {
-                v.y = JumpVelocity;
+                if (OnSpring && !_autoJump)
+                {
+                    v.y = SpringJumpVelocity;
+                }
+                else
+                {
+                    v.y = JumpVelocity;
+                }
                 groundProbe.ConsumeJump();
                 planeMotion?.ResetLandingSlide();
             }
@@ -289,7 +324,7 @@ namespace Game.Player
 
         private void ApplyAxisConstraints()
         {
-            var constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            var constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
             if (activePlane == MovePlane.X) constraints |= RigidbodyConstraints.FreezePositionZ;
             else constraints |= RigidbodyConstraints.FreezePositionX;
             rb.constraints = constraints;
