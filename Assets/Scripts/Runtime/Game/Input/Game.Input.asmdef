@@ -6,6 +6,7 @@
         "Game.Player",
         "Game.Projection",
         "Game.Preview",
+        "Game.Tutorial",
         "Unity.InputSystem"
     ],
     "includePlatforms": [],
