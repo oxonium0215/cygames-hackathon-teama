@@ -3,33 +3,43 @@ using UnityEngine.InputSystem;
 using Game.Player;
 using Game.Projection;
 using Game.Preview;
-using Game.Tutorial;
 
 namespace Game.Input
 {
+    // Routes UnityEvents from PlayerInput to gameplay components
     public class PlayerInputRelay : MonoBehaviour
     {
-        [Header("Component References")]
+        [Tooltip("PlayerMotor component that receives movement and jump commands.")]
         [SerializeField] private PlayerMotor motor;
+        [Tooltip("PerspectiveProjectionManager used to check if perspective switching is active.")]
         [SerializeField] private PerspectiveProjectionManager perspective;
+        [Tooltip("StagePreviewManager for 3D preview functionality.")]
         [SerializeField] private StagePreviewManager stagePreview;
-        [SerializeField] private TutorialManager tutorialManager;
 
         private UnityPlayerInput playerInput;
         private bool wasInputSuppressed;
+        public bool IsPreview { get; private set; }
 
         private void Awake()
         {
             playerInput = new UnityPlayerInput();
         }
 
+        private void Start()
+        {
+            IsPreview = false;
+        }
+
         private void Update()
         {
+            // Clear transient flags once per frame
             playerInput?.ClearTransient();
 
+            // Check if input suppression has ended and forward any held input
             bool currentlySuppress = perspective != null && perspective.IsSwitching && perspective.JumpOnlyDuringSwitch;
             if (wasInputSuppressed && !currentlySuppress && playerInput != null)
             {
+                // Suppression just ended, forward any currently held input
                 motor?.SetMove(playerInput.Move);
             }
             wasInputSuppressed = currentlySuppress;
@@ -37,38 +47,36 @@ namespace Game.Input
 
         public void OnMove(InputAction.CallbackContext ctx)
         {
-            if (tutorialManager != null && tutorialManager.IsTutorialActive)
-            {
-                motor?.SetMove(Vector2.zero);
-                return;
-            }
-
             Vector2 moveValue = ctx.ReadValue<Vector2>();
+
+            // Update adapter state regardless of suppression
             playerInput?.SetMove(moveValue);
 
+            // If preview is active, route horizontal input to camera rotation
             if (stagePreview != null && stagePreview.IsPreviewActive)
             {
                 stagePreview.HandleCameraRotationInput(moveValue.x);
-                return;
+                return; // Don't forward to motor during preview
             }
 
+            // Suppress lateral input during perspective switching if jump-only mode is enabled
             if (perspective != null && perspective.IsSwitching && perspective.JumpOnlyDuringSwitch)
             {
-                return;
+                return; // Skip forwarding to motor, but jump input remains unaffected
             }
 
             motor?.SetMove(moveValue);
         }
 
+        // Handles both performed and canceled so jump-cut works
         public void OnJump(InputAction.CallbackContext ctx)
         {
-            if (tutorialManager != null && tutorialManager.IsTutorialActive) return;
-
             if (ctx.performed)
             {
                 playerInput?.OnJumpPerformed();
                 motor?.QueueJump();
-            } else if (ctx.canceled)
+            }
+            else if (ctx.canceled)
             {
                 playerInput?.OnJumpCanceled();
                 motor?.JumpCanceled();
@@ -77,31 +85,44 @@ namespace Game.Input
 
         public void OnSwitchView(InputAction.CallbackContext ctx)
         {
-            if (tutorialManager != null && tutorialManager.IsTutorialActive) return;
-
             if (ctx.performed)
                 perspective?.TogglePerspective();
         }
 
         public void OnPreview3D(InputAction.CallbackContext ctx)
         {
-            if (tutorialManager != null && tutorialManager.IsTutorialActive) return;
-
             if (!stagePreview) return;
+
+            // Prevent preview during viewpoint changes
             if (perspective != null && perspective.IsSwitching) return;
 
             if (ctx.performed)
             {
+                // Toggle preview state
                 if (stagePreview.IsPreviewActive)
                 {
                     stagePreview.EndPreview();
-                } else
+                    IsPreview = false;
+                }
+                else
                 {
                     stagePreview.StartPreview();
+                    IsPreview = true;
                 }
             }
         }
 
+        public void Respawn(InputAction.CallbackContext ctx)
+        {
+            if (ctx.performed)
+            {
+                motor?.Respawn();
+            }
+        }
+        /// <summary>
+        /// Clears the input state to prevent stale input from causing unwanted player movement.
+        /// Called when exiting preview mode to ensure no residual input remains.
+        /// </summary>
         public void ClearInputState()
         {
             playerInput?.SetMove(Vector2.zero);

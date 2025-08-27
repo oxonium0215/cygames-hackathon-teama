@@ -231,6 +231,22 @@ MonoBehaviour:
         m_CallState: 2
     m_ActionId: f3a5b2c8-e1d4-4a8f-9b6c-3e7d8a9f0c1b
     m_ActionName: 'Gameplay/Preview3D[/Keyboard/v]'
+  - m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 6181537637692255776}
+        m_TargetAssemblyTypeName: Game.Input.PlayerInputRelay, Game.Input
+        m_MethodName: Respawn
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+    m_ActionId: 60fc4e29-b1e0-468a-8d5a-131ea8818557
+    m_ActionName: 'Gameplay/Respawn[/Keyboard/z]'
   m_NeverAutoSwitchControlSchemes: 0
   m_DefaultControlScheme: 
   m_DefaultActionMap: Gameplay
@@ -259,7 +275,7 @@ MonoBehaviour:
   jumpBufferTime: 0.1
   _springMask:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 64
   _springJumpHeight: 9.5
   gravity: -40
   groundStickForce: 5
@@ -275,6 +291,7 @@ MonoBehaviour:
     m_Bits: 8
   groundCheckSkin: 0.02
   autoSizeGroundCheck: 1
+  gameOverBorder: -10
 --- !u!114 &6181537637692255776
 MonoBehaviour:
   m_ObjectHideFlags: 0

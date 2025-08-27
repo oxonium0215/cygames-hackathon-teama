@@ -1,12 +1,8 @@
 {
-    "name": "Game.Input",
-    "rootNamespace": "Game.Input",
+    "name": "Game.Switch",
+    "rootNamespace": "Game.Switch",
     "references": [
-        "Game.Core",
-        "Game.Player",
-        "Game.Projection",
-        "Game.Preview",
-        "Unity.InputSystem"
+        "Game.Input"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -43,6 +43,9 @@ namespace Game.Player
         [SerializeField] private float groundCheckSkin = 0.02f;
         [SerializeField] private bool autoSizeGroundCheck = true;
 
+        [Header("GameOver")]
+        [SerializeField] private float gameOverBorder = -10f;
+
         private Rigidbody rb;
         private Collider col;
 
@@ -79,6 +82,8 @@ namespace Game.Player
         private float JumpVelocity => Mathf.Sqrt(2f * Mathf.Abs(gravity) * Mathf.Max(0.0001f, jumpHeight));
         private float SpringJumpVelocity => Mathf.Sqrt(2f * Mathf.Abs(gravity) * Mathf.Max(0.0001f, _springJumpHeight));
         private bool _autoJump = true;
+
+        private Transform _lastCheckPoint;
 
         public MovePlane ActivePlane
         {
@@ -196,6 +201,11 @@ namespace Game.Player
         {
             // Do nothing while rotating; the manager drives transform/overlaps.
             if (rotationFrozen) return;
+
+            if (transform.position.y < gameOverBorder)
+            {
+                Respawn();
+            }
 
             if (_autoJump && OnSpring)
             {
@@ -342,6 +352,25 @@ namespace Game.Player
             var v = rb.linearVelocity;
             if (activePlane == MovePlane.X) v.x = speed; else v.z = speed;
             rb.linearVelocity = v;
+        }
+        private void OnTriggerEnter(Collider other)
+        {
+            if (other.tag == "CheckPoint")
+            {
+                _lastCheckPoint = other.transform;
+            }
+            else if (other.tag == "Goal")
+            {
+                Debug.Log("Goal!");
+            }
+        }
+
+        public void Respawn()
+        {
+            if (_lastCheckPoint != null)
+            {
+                transform.position = _lastCheckPoint.position;
+            }
         }
     }
 }

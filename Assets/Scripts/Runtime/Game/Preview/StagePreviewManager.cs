@@ -54,7 +54,7 @@ namespace Game.Preview
         private Quaternion originalCameraRotation;
         private float originalCameraSize;
         private bool originalOrthographic;
-        
+
         // Store original cameraPivot rotation for restoration
         private Quaternion originalCameraPivotRotation;
 
@@ -97,11 +97,11 @@ namespace Game.Preview
                     }
                 }
             }
-            
+
             // Find cameraPivot from PerspectiveProjectionManager if not assigned
             if (!cameraPivot && perspectiveProjectionManager)
             {
-                var pivotField = perspectiveProjectionManager.GetType().GetField("cameraPivot", 
+                var pivotField = perspectiveProjectionManager.GetType().GetField("cameraPivot",
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 if (pivotField != null)
                     cameraPivot = pivotField.GetValue(perspectiveProjectionManager) as Transform;
@@ -188,7 +188,7 @@ namespace Game.Preview
                 Debug.LogWarning("StagePreviewManager: player is not assigned");
                 isValid = false;
             }
-            
+
             if (!cameraPivot)
             {
                 Debug.LogWarning("StagePreviewManager: cameraPivot is not assigned - camera rotation will not work");
@@ -206,7 +206,7 @@ namespace Game.Preview
             originalCameraRotation = cameraTransform.rotation;
             originalCameraSize = mainCamera.orthographicSize;
             originalOrthographic = mainCamera.orthographic;
-            
+
             // Save original cameraPivot rotation for restoration
             if (cameraPivot)
                 originalCameraPivotRotation = cameraPivot.rotation;
@@ -292,7 +292,7 @@ namespace Game.Preview
             Vector3 startPos = cameraTransform.position;
             Quaternion startRot = cameraTransform.rotation;
             float startSize = mainCamera.orthographicSize;
-            
+
             // Store current cameraPivot rotation for smooth transition
             Quaternion startCameraPivotRot = cameraPivot ? cameraPivot.rotation : Quaternion.identity;
 
@@ -305,7 +305,7 @@ namespace Game.Preview
                 cameraTransform.position = Vector3.Lerp(startPos, originalCameraPosition, curveT);
                 cameraTransform.rotation = Quaternion.Slerp(startRot, originalCameraRotation, curveT);
                 mainCamera.orthographicSize = Mathf.Lerp(startSize, originalCameraSize, curveT);
-                
+
                 // Smoothly restore cameraPivot rotation simultaneously
                 if (cameraPivot)
                     cameraPivot.rotation = Quaternion.Slerp(startCameraPivotRot, originalCameraPivotRotation, curveT);
@@ -317,7 +317,7 @@ namespace Game.Preview
             cameraTransform.rotation = originalCameraRotation;
             mainCamera.orthographicSize = originalCameraSize;
             mainCamera.orthographic = originalOrthographic;
-            
+
             // Ensure cameraPivot rotation is exactly restored
             if (cameraPivot)
                 cameraPivot.rotation = originalCameraPivotRotation;
@@ -384,6 +384,17 @@ namespace Game.Preview
             {
                 foreach (Transform child in sourceRoot)
                 {
+                    if (child.CompareTag("FadeTileManager"))
+                    {
+                        foreach (Transform grandChild in child)
+                        {
+                            if (grandChild.CompareTag("FadingTile"))
+                            {
+                                CloneObjectForPreviewRecursive(grandChild, previewObject.transform, axis, 0, MAX_RECURSION_DEPTH);
+                            }
+                        }
+                        continue;
+                    }
                     CloneObjectForPreview(child, previewObject.transform, axis);
                 }
             }
@@ -404,19 +415,29 @@ namespace Game.Preview
             GameObject clone = new GameObject(original.name + "_Preview");
             clone.transform.SetParent(parent);
 
-            clone.transform.localPosition = ProjectPosition(original.position, axis);
-            clone.transform.localRotation = original.rotation;
+            clone.transform.position = ProjectPosition(original.position, axis);
+            clone.transform.localRotation = original.localRotation;
 
-            // Set uniform depth size
-            Vector3 scale = original.localScale;
+            // Calculate the desired world scale of the clone
+            Vector3 desiredWorldScale = original.lossyScale;
             if (axis == ProjectionAxis.FlattenZ)
             {
-                scale.z = FLATTENED_AXIS_SCALE;
+                desiredWorldScale.z = FLATTENED_AXIS_SCALE;
             } else if (axis == ProjectionAxis.FlattenX)
             {
-                scale.x = FLATTENED_AXIS_SCALE;
+                desiredWorldScale.x = FLATTENED_AXIS_SCALE;
             }
-            clone.transform.localScale = scale;
+
+            // Calculate the required local scale to achieve the desired world scale,
+            // taking the parent's world scale into account.
+            Vector3 parentWorldScale = parent.lossyScale;
+            Vector3 requiredLocalScale = new Vector3(
+                parentWorldScale.x == 0 ? 0 : desiredWorldScale.x / parentWorldScale.x,
+                parentWorldScale.y == 0 ? 0 : desiredWorldScale.y / parentWorldScale.y,
+                parentWorldScale.z == 0 ? 0 : desiredWorldScale.z / parentWorldScale.z
+            );
+
+            clone.transform.localScale = requiredLocalScale;
 
             MeshRenderer originalRenderer = original.GetComponent<MeshRenderer>();
             MeshFilter originalFilter = original.GetComponent<MeshFilter>();
@@ -446,7 +467,8 @@ namespace Game.Preview
             if (axis == ProjectionAxis.FlattenZ)
             {
                 projected.z = geometryProjector.GetPlaneZ();
-            } else if (axis == ProjectionAxis.FlattenX)
+            }
+            else if (axis == ProjectionAxis.FlattenX)
             {
                 projected.x = geometryProjector.GetPlaneX();
             }
