@@ -112,5 +112,10 @@ namespace Game.Input
         {
             playerInput?.SetMove(Vector2.zero);
         }
+        
+        /// <summary>
+        /// Provides read-only access to the player input state for external systems like tutorials.
+        /// </summary>
+        public UnityPlayerInput PlayerInput => playerInput;
     }
 }
