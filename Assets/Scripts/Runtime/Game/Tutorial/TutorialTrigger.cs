@@ -1,6 +1,7 @@
 using UnityEngine;
 using Game.Player;
 using System.Collections.Generic;
+using UnityEngine.InputSystem;
 
 namespace Game.Tutorial
 {
@@ -9,18 +10,32 @@ namespace Game.Tutorial
         [SerializeField] private TutorialManager tutorialManager;
         [SerializeField] private List<TutorialStep> steps = new List<TutorialStep>();
 
-        private bool hasBeenTriggered = false;
+        private PlayerInput playerInput;
 
-        private void OnTriggerEnter(Collider other)
+        private void OnTriggerStay(Collider other)
         {
-            if (hasBeenTriggered || tutorialManager == null || other.GetComponent<PlayerMotor>() == null)
+            if (tutorialManager == null || other.GetComponent<PlayerMotor>() == null)
             {
                 return;
             }
 
-            tutorialManager.StartTutorial(steps);
-            hasBeenTriggered = true;
-            GetComponent<Collider>().enabled = false;
+            if (playerInput == null)
+            {
+                playerInput = other.GetComponent<PlayerInput>();
+            }
+
+            if (playerInput != null && playerInput.actions["Jump"].WasPressedThisFrame())
+            {
+                tutorialManager.StartTutorial(steps);
+            }
+        }
+
+        private void OnTriggerExit(Collider other)
+        {
+            if (other.GetComponent<PlayerMotor>() != null)
+            {
+                playerInput = null;
+            }
         }
     }
 }

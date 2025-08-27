@@ -18,6 +18,7 @@ namespace Game.Tutorial
         [Header("Component References")]
         [SerializeField] private PlayerMotor playerMotor;
         [SerializeField] private Camera mainCamera;
+        [SerializeField] private PlayerInput playerInput; // Assign this in the inspector
 
         public bool IsTutorialActive { get; private set; }
 
@@ -27,6 +28,15 @@ namespace Game.Tutorial
         private Vector3 originalCameraPosition;
         private float originalCameraOrthoSize;
         private Coroutine activeCoroutine;
+        private InputAction jumpAction;
+
+        private void Awake()
+        {
+            if (playerInput != null)
+            {
+                jumpAction = playerInput.actions["Jump"];
+            }
+        }
 
         private void Start()
         {
@@ -36,7 +46,7 @@ namespace Game.Tutorial
 
         private void Update()
         {
-            if (IsTutorialActive && Keyboard.current.spaceKey.wasPressedThisFrame)
+            if (IsTutorialActive && jumpAction != null && jumpAction.WasPressedThisFrame())
             {
                 AdvanceStep();
             }

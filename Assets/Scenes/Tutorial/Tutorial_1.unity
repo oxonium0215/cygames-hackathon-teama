@@ -279,6 +279,7 @@ MonoBehaviour:
   screenOverlay: {fileID: 316258963}
   playerMotor: {fileID: 278027690}
   mainCamera: {fileID: 961739752}
+  playerInput: {fileID: 729896957}
 --- !u!1 &203844586
 GameObject:
   m_ObjectHideFlags: 0
@@ -847,6 +848,17 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 710514276}
   m_CullTransparentMesh: 1
+--- !u!114 &729896957 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 584307060416105758, guid: 7fe56478f71be0740a9c1a470b1db064, type: 3}
+  m_PrefabInstance: {fileID: 6651190949670470160}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62899f850307741f2a39c98a8b639597, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &745287079
 GameObject:
   m_ObjectHideFlags: 0
