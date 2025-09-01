@@ -57,6 +57,7 @@ namespace Game.Player
         private Vector2 moveInput;
         private bool jumpQueued;
         private bool jumpHeld;
+        private bool jumpingEnabled = true;
 
         // Services
         private GroundProbe groundProbe;
@@ -97,6 +98,8 @@ namespace Game.Player
                 }
             }
         }
+
+        public void SetJumpingEnabled(bool enabled) => jumpingEnabled = enabled;
 
         public void SetLateralEnabled(bool enabled) => lateralEnabled = enabled;
 
@@ -157,7 +160,7 @@ namespace Game.Player
 
         public void QueueJump()
         {
-            if (rotationFrozen) return;
+            if (rotationFrozen || !jumpingEnabled) return;
             jumpQueued = true;
             jumpHeld = true;
             _autoJump = false;
@@ -210,8 +213,7 @@ namespace Game.Player
             if (_autoJump && OnSpring)
             {
                 AutoJump();
-            }
-            else if (!_autoJump && OnSpring)
+            } else if (!_autoJump && OnSpring)
             {
                 QueueJump();
             }
@@ -237,8 +239,7 @@ namespace Game.Player
                         tempVector3.z = 0f;
                         rb.linearVelocity = tempVector3;
                     }
-                }
-                else
+                } else
                 {
                     if (!Mathf.Approximately(pos.x, planeLockValue))
                     {
@@ -279,8 +280,7 @@ namespace Game.Player
                 if (OnSpring && !_autoJump)
                 {
                     v.y = SpringJumpVelocity;
-                }
-                else
+                } else
                 {
                     v.y = JumpVelocity;
                 }
@@ -318,12 +318,10 @@ namespace Game.Player
                 {
                     float scaleXZ = Mathf.Max(Mathf.Abs(transform.lossyScale.x), Mathf.Abs(transform.lossyScale.z));
                     suggested = Mathf.Clamp(cap.radius * scaleXZ * 0.6f, 0.04f, 0.5f);
-                }
-                else if (col is CharacterController cc)
+                } else if (col is CharacterController cc)
                 {
                     suggested = Mathf.Clamp(cc.radius * 0.6f, 0.04f, 0.5f);
-                }
-                else
+                } else
                 {
                     float footprint = Mathf.Min(cachedBounds.extents.x, cachedBounds.extents.z);
                     suggested = Mathf.Clamp(footprint * 0.5f, 0.04f, 0.5f);
@@ -358,8 +356,7 @@ namespace Game.Player
             if (other.tag == "CheckPoint")
             {
                 _lastCheckPoint = other.transform;
-            }
-            else if (other.tag == "Goal")
+            } else if (other.tag == "Goal")
             {
                 Debug.Log("Goal!");
             }

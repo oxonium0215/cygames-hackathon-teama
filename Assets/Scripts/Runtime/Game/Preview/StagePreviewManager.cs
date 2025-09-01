@@ -62,7 +62,7 @@ namespace Game.Preview
         private Vector3 originalPlayerAngularVelocity;
         private bool wasPlayerMotorEnabled;
 
-        private bool isPreviewActive = false;
+        public bool isPreviewActive = false;
         private bool isTransitioning = false;
         private Coroutine transitionCoroutine;
 
@@ -375,41 +375,26 @@ namespace Game.Preview
             }
 
             previewObject = new GameObject(name);
-            // Parent to Level instead of this StagePreviewManager
             Transform parentTransform = levelTransform ? levelTransform : transform;
             previewObject.transform.SetParent(parentTransform);
 
             Transform sourceRoot = geometryProjector.SourceRoot;
             if (sourceRoot)
             {
-                foreach (Transform child in sourceRoot)
+                var allChildren = sourceRoot.GetComponentsInChildren<Transform>(true);
+                foreach (Transform child in allChildren)
                 {
-                    if (child.CompareTag("FadeTileManager"))
+                    if (child == sourceRoot) continue;
+                    if (child.GetComponent<MeshRenderer>() != null)
                     {
-                        foreach (Transform grandChild in child)
-                        {
-                            if (grandChild.CompareTag("FadingTile"))
-                            {
-                                CloneObjectForPreviewRecursive(grandChild, previewObject.transform, axis, 0, MAX_RECURSION_DEPTH);
-                            }
-                        }
-                        continue;
+                        CloneObjectForPreview(child, previewObject.transform, axis);
                     }
-                    CloneObjectForPreview(child, previewObject.transform, axis);
                 }
             }
         }
 
         private void CloneObjectForPreview(Transform original, Transform parent, ProjectionAxis axis)
         {
-            CloneObjectForPreviewRecursive(original, parent, axis, 0, MAX_RECURSION_DEPTH);
-        }
-
-        private void CloneObjectForPreviewRecursive(Transform original, Transform parent, ProjectionAxis axis, int currentDepth, int maxDepth)
-        {
-            if (currentDepth >= maxDepth) return;
-
-            // Skip if original is already a preview object to prevent recursive preview generation
             if (original.name.Contains("Preview")) return;
 
             GameObject clone = new GameObject(original.name + "_Preview");
@@ -418,7 +403,6 @@ namespace Game.Preview
             clone.transform.position = ProjectPosition(original.position, axis);
             clone.transform.localRotation = original.localRotation;
 
-            // Calculate the desired world scale of the clone
             Vector3 desiredWorldScale = original.lossyScale;
             if (axis == ProjectionAxis.FlattenZ)
             {
@@ -428,16 +412,13 @@ namespace Game.Preview
                 desiredWorldScale.x = FLATTENED_AXIS_SCALE;
             }
 
-            // Calculate the required local scale to achieve the desired world scale,
-            // taking the parent's world scale into account.
-            Vector3 parentWorldScale = parent.lossyScale;
-            Vector3 requiredLocalScale = new Vector3(
-                parentWorldScale.x == 0 ? 0 : desiredWorldScale.x / parentWorldScale.x,
-                parentWorldScale.y == 0 ? 0 : desiredWorldScale.y / parentWorldScale.y,
-                parentWorldScale.z == 0 ? 0 : desiredWorldScale.z / parentWorldScale.z
+            clone.transform.localScale = Vector3.one;
+            var parentLossyScale = clone.transform.parent != null ? clone.transform.parent.lossyScale : Vector3.one;
+            clone.transform.localScale = new Vector3(
+                parentLossyScale.x != 0 ? desiredWorldScale.x / parentLossyScale.x : 0,
+                parentLossyScale.y != 0 ? desiredWorldScale.y / parentLossyScale.y : 0,
+                parentLossyScale.z != 0 ? desiredWorldScale.z / parentLossyScale.z : 0
             );
-
-            clone.transform.localScale = requiredLocalScale;
 
             MeshRenderer originalRenderer = original.GetComponent<MeshRenderer>();
             MeshFilter originalFilter = original.GetComponent<MeshFilter>();
@@ -450,14 +431,6 @@ namespace Game.Preview
                 cloneFilter.mesh = originalFilter.mesh;
                 cloneRenderer.material = previewMaterial;
             }
-
-            foreach (Transform child in original)
-            {
-                if (child == null) continue;
-                // Skip if child is already a preview object to prevent recursive preview generation
-                if (child.name.Contains("Preview")) continue;
-                CloneObjectForPreviewRecursive(child, clone.transform, axis, currentDepth + 1, maxDepth);
-            }
         }
 
         private Vector3 ProjectPosition(Vector3 position, ProjectionAxis axis)
@@ -467,8 +440,7 @@ namespace Game.Preview
             if (axis == ProjectionAxis.FlattenZ)
             {
                 projected.z = geometryProjector.GetPlaneZ();
-            }
-            else if (axis == ProjectionAxis.FlattenX)
+            } else if (axis == ProjectionAxis.FlattenX)
             {
                 projected.x = geometryProjector.GetPlaneX();
             }
