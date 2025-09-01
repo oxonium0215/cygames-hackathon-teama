@@ -2,7 +2,7 @@ using UnityEngine;
 using TMPro;  // TextMeshPro 用
 using UnityEngine.UI;
 
-public class UIContorollerCheak : MonoBehaviour
+public class UIControllerCheck : MonoBehaviour
 {
     [SerializeField] private Button toggleButton;
     [SerializeField] private TMP_Text displayText;

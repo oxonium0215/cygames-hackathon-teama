@@ -49,65 +49,44 @@ namespace Game.Player
         private Rigidbody rb;
         private Collider col;
 
-        // Cached objects to reduce GC allocations in FixedUpdate/Update
-        private Vector3 tempVector3;
-        private Bounds cachedBounds;
-
-        // Input/state
-        private Vector2 moveInput;
-        private bool jumpQueued;
-        private bool jumpHeld;
-        private bool jumpingEnabled = true;
+        // Player components
+        private PlayerMovement playerMovement;
+        private PlayerJumping playerJumping;
+        private PlayerCollision playerCollision;
 
         // Services
         private GroundProbe groundProbe;
         private PlaneMotion planeMotion;
 
-        // Lateral axis logic
-        private MovePlane activePlane = MovePlane.X;
-        private bool lateralEnabled = true;
-
-        // Continuous physics projection lock (keeps body on plane)
-        private bool planeLockEnabled;
-        private MovePlane planeLockAxis;
-        private float planeLockValue;
-
         // Rotation freeze (no gravity/inertia/velocity changes while true)
         private bool rotationFrozen;
 
-        // Cache for last velocity Y (for landing slide detection)
-        private float lastVelY;
-
         public bool IsGrounded => groundProbe?.IsGrounded ?? false;
         public bool OnSpring => groundProbe?.OnSpring ?? false;
-        private float JumpVelocity => Mathf.Sqrt(2f * Mathf.Abs(gravity) * Mathf.Max(0.0001f, jumpHeight));
-        private float SpringJumpVelocity => Mathf.Sqrt(2f * Mathf.Abs(gravity) * Mathf.Max(0.0001f, _springJumpHeight));
         private bool _autoJump = true;
 
         private Transform _lastCheckPoint;
 
         public MovePlane ActivePlane
         {
-            get => activePlane;
+            get => playerMovement?.ActivePlane ?? MovePlane.X;
             set
             {
-                if (activePlane != value)
+                if (playerMovement != null && playerMovement.ActivePlane != value)
                 {
-                    activePlane = value;
+                    playerMovement.ActivePlane = value;
                     ApplyAxisConstraints();
                 }
             }
         }
 
-        public void SetJumpingEnabled(bool enabled) => jumpingEnabled = enabled;
+        public void SetJumpingEnabled(bool enabled) => playerJumping?.SetJumpingEnabled(enabled);
 
-        public void SetLateralEnabled(bool enabled) => lateralEnabled = enabled;
+        public void SetLateralEnabled(bool enabled) => playerMovement?.SetLateralEnabled(enabled);
 
         public void SetPlaneLock(MovePlane axis, float planeConst)
         {
-            planeLockEnabled = true;
-            planeLockAxis = axis;
-            planeLockValue = planeConst;
+            playerMovement?.SetPlaneLock(axis, planeConst);
             ApplyAxisConstraints();
             var p = transform.position;
             if (axis == MovePlane.X) p.z = planeConst; else p.x = planeConst;
@@ -117,7 +96,7 @@ namespace Game.Player
         public void BeginRotationFreeze()
         {
             rotationFrozen = true;
-            lateralEnabled = false;
+            playerMovement?.SetLateralEnabled(false);
         }
 
         public void EndRotationFreeze()
@@ -133,15 +112,25 @@ namespace Game.Player
             rb.useGravity = false; // custom gravity
             rb.interpolation = RigidbodyInterpolation.Interpolate;
 
-            EnsureGroundCheckExists();
-            UpdateGroundCheckPoseAndSize();
-            ApplyAxisConstraints();
-
             // Initialize services
             groundProbe = new GroundProbe(coyoteTime);
             planeMotion = new PlaneMotion(enableLandingSlide, landingSlideDuration,
                 landingAccelMultiplier, landingDecelMultiplier);
+                
+            // Initialize player components
+            playerCollision = new PlayerCollision(transform, col, groundProbe, groundMask, _springMask, 
+                gameOverBorder, autoSizeGroundCheck, groundCheckSkin, groundCheckRadius);
+            playerMovement = new PlayerMovement(rb, maxRunSpeed, groundAcceleration, airAcceleration, 
+                groundDeceleration, airDeceleration, planeMotion);
+            playerJumping = new PlayerJumping(rb, groundProbe, jumpHeight, jumpCutMultiplier, _springJumpHeight,
+                jumpBufferTime, gravity, groundStickForce, landingMinFallSpeed);
+
+            groundCheck = playerCollision.GroundCheck;
+            ApplyAxisConstraints();
         }
+        
+        // Expose ground check radius for external access
+        public float GroundCheckRadius => playerCollision?.GroundCheckRadius ?? groundCheckRadius;
 
         private void OnValidate()
         {
@@ -156,48 +145,27 @@ namespace Game.Player
             groundCheckSkin = Mathf.Clamp(groundCheckSkin, 0f, 0.2f);
         }
 
-        public void SetMove(Vector2 move) => moveInput = move;
+        public void SetMove(Vector2 move) => playerMovement?.SetMove(move);
 
         public void QueueJump()
         {
-            if (rotationFrozen || !jumpingEnabled) return;
-            jumpQueued = true;
-            jumpHeld = true;
-            _autoJump = false;
-            groundProbe?.SetJumpBuffer(jumpBufferTime);
+            playerJumping?.QueueJump(rotationFrozen);
         }
 
         public void JumpCanceled()
         {
-            if (rotationFrozen) return;
-            var v = rb.linearVelocity;
-            _autoJump = true;
-            if (v.y > 0f)
-            {
-                v.y *= jumpCutMultiplier;
-                rb.linearVelocity = v;
-            }
-        }
-
-        private void AutoJump()
-        {
-            if (rotationFrozen) return;
-            jumpQueued = true;
-            jumpHeld = true;
-            groundProbe?.SetJumpBuffer(jumpBufferTime);
+            playerJumping?.JumpCanceled(rotationFrozen);
         }
 
         private void Update()
         {
-            UpdateGroundCheckPoseAndSize();
-
             if (rotationFrozen)
             {
                 return;
             }
 
-            // Update ground probe (handles coyote time and jump buffer timing)
-            groundProbe?.UpdateGroundCheck(groundCheck.position, groundCheckRadius, groundMask, _springMask, Time.deltaTime);
+            // Update collision and ground checking
+            playerCollision?.UpdateGroundCheck(Time.deltaTime);
         }
 
         private void FixedUpdate()
@@ -205,135 +173,23 @@ namespace Game.Player
             // Do nothing while rotating; the manager drives transform/overlaps.
             if (rotationFrozen) return;
 
-            if (transform.position.y < gameOverBorder)
-            {
-                Respawn();
-            }
-
-            if (_autoJump && OnSpring)
-            {
-                AutoJump();
-            } else if (!_autoJump && OnSpring)
-            {
-                QueueJump();
-            }
-
-            // Keep on plane always
-            if (planeLockEnabled)
-            {
-                Vector3 pos = rb.position;
-                if (planeLockAxis == MovePlane.X)
-                {
-                    if (!Mathf.Approximately(pos.z, planeLockValue))
-                    {
-                        tempVector3.x = pos.x;
-                        tempVector3.y = pos.y;
-                        tempVector3.z = planeLockValue;
-                        rb.position = tempVector3;
-                    }
-                    if (Mathf.Abs(rb.linearVelocity.z) > 0f)
-                    {
-                        var vel = rb.linearVelocity;
-                        tempVector3.x = vel.x;
-                        tempVector3.y = vel.y;
-                        tempVector3.z = 0f;
-                        rb.linearVelocity = tempVector3;
-                    }
-                } else
-                {
-                    if (!Mathf.Approximately(pos.x, planeLockValue))
-                    {
-                        tempVector3.x = planeLockValue;
-                        tempVector3.y = pos.y;
-                        tempVector3.z = pos.z;
-                        rb.position = tempVector3;
-                    }
-                    if (Mathf.Abs(rb.linearVelocity.x) > 0f)
-                    {
-                        var vel = rb.linearVelocity;
-                        tempVector3.x = 0f;
-                        tempVector3.y = vel.y;
-                        tempVector3.z = vel.z;
-                        rb.linearVelocity = tempVector3;
-                    }
-                }
-            }
-
-            var v = rb.linearVelocity;
+            // Check game over boundary
+            playerCollision?.CheckGameOverBoundary();
 
             // Update landing slide logic
-            planeMotion?.UpdateLandingSlide(IsGrounded, lastVelY, landingMinFallSpeed, Time.fixedDeltaTime);
+            playerJumping?.UpdateLandingSlide(IsGrounded, planeMotion, Time.fixedDeltaTime);
 
-            // Apply lateral movement through PlaneMotion service
-            v = planeMotion?.ApplyLateralMovement(moveInput, activePlane, maxRunSpeed, v, IsGrounded,
-                groundAcceleration, airAcceleration, groundDeceleration, airDeceleration,
-                Time.fixedDeltaTime, lateralEnabled) ?? v;
+            // Apply movement
+            playerMovement?.ApplyMovement(IsGrounded, Time.fixedDeltaTime);
 
-            // Gravity + stick
-            v.y += gravity * Time.fixedDeltaTime;
-            if (IsGrounded && v.y < 0f)
-                v.y -= groundStickForce * Time.fixedDeltaTime;
-
-            // Buffered jump + coyote (using GroundProbe service)
-            if (groundProbe != null && groundProbe.CanJump())
-            {
-                if (OnSpring && !_autoJump)
-                {
-                    v.y = SpringJumpVelocity;
-                } else
-                {
-                    v.y = JumpVelocity;
-                }
-                groundProbe.ConsumeJump();
-                planeMotion?.ResetLandingSlide();
-            }
-            jumpQueued = false;
-
-            rb.linearVelocity = v;
-            lastVelY = v.y;
-        }
-
-        private void EnsureGroundCheckExists()
-        {
-            if (groundCheck != null) return;
-            var gc = new GameObject("GroundCheck");
-            groundCheck = gc.transform;
-            groundCheck.SetParent(transform, worldPositionStays: true);
-        }
-
-        private void UpdateGroundCheckPoseAndSize()
-        {
-            if (!col || !groundCheck) return;
-
-            cachedBounds = col.bounds; // world AABB - cache to avoid repeated property access
-            tempVector3.x = cachedBounds.center.x;
-            tempVector3.y = cachedBounds.min.y + groundCheckSkin;
-            tempVector3.z = cachedBounds.center.z;
-            groundCheck.position = tempVector3;
-
-            if (autoSizeGroundCheck)
-            {
-                float suggested;
-                if (col is CapsuleCollider cap)
-                {
-                    float scaleXZ = Mathf.Max(Mathf.Abs(transform.lossyScale.x), Mathf.Abs(transform.lossyScale.z));
-                    suggested = Mathf.Clamp(cap.radius * scaleXZ * 0.6f, 0.04f, 0.5f);
-                } else if (col is CharacterController cc)
-                {
-                    suggested = Mathf.Clamp(cc.radius * 0.6f, 0.04f, 0.5f);
-                } else
-                {
-                    float footprint = Mathf.Min(cachedBounds.extents.x, cachedBounds.extents.z);
-                    suggested = Mathf.Clamp(footprint * 0.5f, 0.04f, 0.5f);
-                }
-                groundCheckRadius = suggested;
-            }
+            // Apply gravity and jumping
+            playerJumping?.ApplyGravityAndJumping(IsGrounded, OnSpring, planeMotion, Time.fixedDeltaTime);
         }
 
         private void ApplyAxisConstraints()
         {
             var constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
-            if (activePlane == MovePlane.X) constraints |= RigidbodyConstraints.FreezePositionZ;
+            if (ActivePlane == MovePlane.X) constraints |= RigidbodyConstraints.FreezePositionZ;
             else constraints |= RigidbodyConstraints.FreezePositionX;
             rb.constraints = constraints;
         }
@@ -341,33 +197,22 @@ namespace Game.Player
         // Utilities
         public float GetLateralSpeed()
         {
-            var v = rb.linearVelocity;
-            return (activePlane == MovePlane.X) ? v.x : v.z;
+            return playerMovement?.GetLateralSpeed() ?? 0f;
         }
 
         public void SetLateralSpeed(float speed)
         {
-            var v = rb.linearVelocity;
-            if (activePlane == MovePlane.X) v.x = speed; else v.z = speed;
-            rb.linearVelocity = v;
+            playerMovement?.SetLateralSpeed(speed);
         }
+        
         private void OnTriggerEnter(Collider other)
         {
-            if (other.tag == "CheckPoint")
-            {
-                _lastCheckPoint = other.transform;
-            } else if (other.tag == "Goal")
-            {
-                Debug.Log("Goal!");
-            }
+            playerCollision?.OnTriggerEnter(other);
         }
 
         public void Respawn()
         {
-            if (_lastCheckPoint != null)
-            {
-                transform.position = _lastCheckPoint.position;
-            }
+            playerCollision?.Respawn();
         }
     }
 }
