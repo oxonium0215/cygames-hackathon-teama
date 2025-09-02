@@ -1,6 +1,8 @@
 using UnityEngine;
 
-public class Coin : MonoBehaviour
+namespace Game.Gimmicks
+{
+    public class Coin : MonoBehaviour
 {
     public const string PLAYER_TAG = "Player";
     public const float DEFAULT_ROTATION_SPEED = 180f;

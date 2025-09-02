@@ -1,6 +1,8 @@
 using UnityEngine;
 
-public class Warphole : MonoBehaviour
+namespace Game.Gimmicks
+{
+    public class Warphole : MonoBehaviour
 {
 
     [Header("Warp Settings")]
