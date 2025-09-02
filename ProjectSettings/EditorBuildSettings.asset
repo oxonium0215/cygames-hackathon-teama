@@ -45,7 +45,7 @@ EditorBuildSettings:
     path: Assets/Scenes/Tutorial/Tutorial_2.unity
     guid: e5e1dc95eef731b459ea5f7a1c453862
   - enabled: 1
-    path: Assets/Scenes/Tutorial/Tutorial_3.unity
+    path: Assets/Scenes/Levels/Tutorial/Tutorial_3.unity
     guid: 6fa7ed49f1b128245b54584e92decaf9
   - enabled: 1
     path: Assets/Scenes/Stage-you4.unity

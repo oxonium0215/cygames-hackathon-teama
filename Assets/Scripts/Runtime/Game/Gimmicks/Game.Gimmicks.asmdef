@@ -1,6 +1,6 @@
 {
-    "name": "Game.Switch",
-    "rootNamespace": "Game.Switch",
+    "name": "Game.Gimmicks",
+    "rootNamespace": "Game.Gimmicks",
     "references": [
         "Game.Input"
     ],

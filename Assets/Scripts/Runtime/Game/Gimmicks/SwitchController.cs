@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Game.Input;
 
-namespace Game.Switch
+namespace Game.Gimmicks
 {
     public class SwitchController : MonoBehaviour
     {
