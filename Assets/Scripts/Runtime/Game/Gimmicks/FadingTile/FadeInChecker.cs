@@ -2,7 +2,9 @@ using UnityEngine;
 using System.Collections;
 using Game.Input;
 
-public class FadeInChecker : MonoBehaviour
+namespace Game.Gimmicks
+{
+    public class FadeInChecker : MonoBehaviour
 {
     [SerializeField] private float fadeInMs = 1000f;
     private FadingTile _fadingTile;
@@ -73,4 +75,5 @@ public class FadeInChecker : MonoBehaviour
         _fadeInStart = false;
         _fadeInCoroutine = null;
     }
+}
 }
