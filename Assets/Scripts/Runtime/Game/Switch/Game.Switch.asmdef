@@ -1,0 +1,16 @@
+{
+    "name": "Game.Switch",
+    "rootNamespace": "Game.Switch",
+    "references": [
+        "Game.Input"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
