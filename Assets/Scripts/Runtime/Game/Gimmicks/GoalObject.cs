@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Game.Core.Runtime
+namespace Game.Gimmicks
 {
 	public class GoalObject : MonoBehaviour
 	{

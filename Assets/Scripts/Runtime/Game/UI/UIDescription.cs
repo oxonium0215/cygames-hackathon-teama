@@ -1,8 +1,10 @@
 using Game.Preview;
 using UnityEngine;
 
-public class UIDescription : MonoBehaviour
+namespace Game.UI
 {
+    public class UIDescription : MonoBehaviour
+    {
 
 	GameObject Text1;    // Start is called once before the first execution of Update after the MonoBehaviour is created
 

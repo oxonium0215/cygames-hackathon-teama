@@ -1,9 +1,7 @@
 {
-    "name": "Game.Switch",
-    "rootNamespace": "Game.Switch",
-    "references": [
-        "Game.Input"
-    ],
+    "name": "Game.UI",
+    "rootNamespace": "",
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

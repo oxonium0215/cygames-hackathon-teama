@@ -2,8 +2,10 @@ using UnityEngine;
 using System.Collections;
 using Game.Input;
 
-public class FadeInChecker : MonoBehaviour
+namespace Game.Gimmicks.FadingTile
 {
+    public class FadeInChecker : MonoBehaviour
+    {
     [SerializeField] private float fadeInMs = 1000f;
     private FadingTile _fadingTile;
     private bool _isPlayerInside;

@@ -1,8 +1,10 @@
 using UnityEngine;
 using System.Collections;
 
-public class FadingTile : MonoBehaviour
+namespace Game.Gimmicks.FadingTile
 {
+    public class FadingTile : MonoBehaviour
+    {
     [SerializeField] private float _waitBeforeFadeMs = 500f;
     [SerializeField] private float _fadeDurationMs = 1000f;
     private Coroutine _fadeCoroutine;

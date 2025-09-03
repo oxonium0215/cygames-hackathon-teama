@@ -1,8 +1,10 @@
 // InputModeManager.cs
 using UnityEngine;
 
-public static class InputModeManager
+namespace Game.UI
 {
+    public static class InputModeManager
+    {
     // 起動ごとのデフォルト（必要なら後述のPlayerPrefsで永続化も可）
     public static bool IsKeyboard = true;
 

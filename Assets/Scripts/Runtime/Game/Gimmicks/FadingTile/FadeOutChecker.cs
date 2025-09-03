@@ -1,7 +1,9 @@
 using UnityEngine;
 
-public class FadeOutChecker : MonoBehaviour
+namespace Game.Gimmicks.FadingTile
 {
+    public class FadeOutChecker : MonoBehaviour
+    {
     private FadingTile _fadingTile;
     void Start()
     {
