@@ -1,7 +1,10 @@
 {
     "name": "Game.UI",
     "rootNamespace": "",
-    "references": [],
+    "references": [
+        "Game.Preview",
+        "Unity.TextMeshPro"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
