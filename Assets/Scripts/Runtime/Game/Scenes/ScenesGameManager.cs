@@ -46,6 +46,7 @@ public class ScenesGameManager : MonoBehaviour
 	public void Goal()
 	{
 		uiDescription.goal = true;
-		Time.timeScale = 0;
+		// Don't freeze the game completely - let UI remain interactive
+		// Time.timeScale = 0;
 	}
 }
