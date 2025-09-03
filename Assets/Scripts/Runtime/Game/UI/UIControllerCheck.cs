@@ -29,4 +29,5 @@ namespace Game.UI
     {
         displayText.text = InputModeManager.IsKeyboard ? "Keyboard Mode" : "Stick Mode";
     }
+    }
 }

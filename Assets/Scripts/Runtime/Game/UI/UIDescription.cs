@@ -56,4 +56,5 @@ namespace Game.UI
 			GoalGameObject.SetActive(true);
 		}
 	}
+    }
 }

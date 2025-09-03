@@ -19,4 +19,5 @@ namespace Game.UI
         // 起動間の永続化が不要ならコメントアウトでOK
         Load();
     }
+    }
 }
