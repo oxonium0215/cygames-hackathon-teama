@@ -82,3 +82,4 @@ namespace Game.Gimmicks.FadingTile
         _fadeCoroutine = null;
     }
 }
+}

@@ -76,3 +76,4 @@ namespace Game.Gimmicks.FadingTile
         _fadeInCoroutine = null;
     }
 }
+}
