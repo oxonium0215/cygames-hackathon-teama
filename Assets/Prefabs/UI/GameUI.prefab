@@ -203,7 +203,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\u30B4\u30FC\u30EB"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: dc753afeae6ec4f7ca515590637d131f, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 1f4de3510e7ecdc44885e368fedbd709, type: 2}
   m_sharedMaterial: {fileID: 8518234065834460267, guid: dc753afeae6ec4f7ca515590637d131f, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
