@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.Serialization;
 using Game.UI;
 
 namespace Game.Core
@@ -8,9 +7,6 @@ namespace Game.Core
     public class ScenesGameManager : MonoBehaviour
     {
         public static ScenesGameManager Instance { get; private set; }
-
-        //this script is used to move the scenes
-        [FormerlySerializedAs("inputToggleButton")] public UIDescription uiDescription;
 
         public bool IsGameOver { get; set; }
         public bool IsGameClear { get; set; }
@@ -34,8 +30,13 @@ namespace Game.Core
 
         public void Goal()
         {
-            uiDescription.goal = true;
-            Time.timeScale = 0;
+            // Find the UIDescription component in the active scene
+            UIDescription goalUI = FindObjectOfType<UIDescription>();
+            if (goalUI != null)
+            {
+                goalUI.goal = true;
+                Time.timeScale = 0;
+            }
         }
     }
 }
