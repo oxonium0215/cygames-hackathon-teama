@@ -4,37 +4,38 @@ namespace Game.Gimmicks.FadingTile
 {
     public class FadeOutChecker : MonoBehaviour
     {
-    private FadingTile _fadingTile;
-    void Start()
-    {
-        Transform parent = transform.parent;
-        if (parent == null) return;
-        Transform grandParent = parent.parent;
-        if (grandParent != null) parent = grandParent;
-
-        foreach (Transform child in grandParent)
+        private FadingTile _fadingTile;
+        void Start()
         {
-            if (child.CompareTag("FadingTile"))
+            Transform parent = transform.parent;
+            if (parent == null) return;
+            Transform grandParent = parent.parent;
+            if (grandParent != null) parent = grandParent;
+
+            foreach (Transform child in grandParent)
             {
-                _fadingTile = child.GetComponent<FadingTile>();
-                break;
+                if (child.CompareTag("FadingTile"))
+                {
+                    _fadingTile = child.GetComponent<FadingTile>();
+                    break;
+                }
             }
         }
-    }
 
-    // Update is called once per frame
-    private void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag("Player"))
+        // Update is called once per frame
+        private void OnTriggerEnter(Collider other)
         {
-            _fadingTile.FadeOut();
+            if (other.CompareTag("Player"))
+            {
+                _fadingTile.FadeOut();
+            }
         }
-    }
-    private void OnTriggerExit(Collider other)
-    {
-        if (other.CompareTag("Player"))
+        private void OnTriggerExit(Collider other)
         {
-            _fadingTile.FadeOutCancel();
+            if (other.CompareTag("Player"))
+            {
+                _fadingTile.FadeOutCancel();
+            }
         }
     }
 }

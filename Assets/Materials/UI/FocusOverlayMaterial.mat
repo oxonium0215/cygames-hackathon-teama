@@ -29,10 +29,10 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Feather: 0.1
-    - _FocusRadius: 0.15735796
+    - _Feather: 0
+    - _FocusRadius: 0.16887227
     m_Colors:
     - _Color: {r: 0, g: 0, b: 0, a: 0.5}
-    - _FocusPosition: {r: 0.49999994, g: 0.4991846, b: 7, a: 0}
+    - _FocusPosition: {r: 0.48351005, g: 0.5088234, b: 7, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
