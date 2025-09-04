@@ -1,14 +1,9 @@
 {
-    "name": "Game.Input",
-    "rootNamespace": "Game.Input",
+    "name": "Game.UI",
+    "rootNamespace": "",
     "references": [
-        "Game.Core",
-        "Game.Player",
-        "Game.Projection",
         "Game.Preview",
-        "Game.Tutorial",
-        "Game.UI",
-        "Unity.InputSystem"
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

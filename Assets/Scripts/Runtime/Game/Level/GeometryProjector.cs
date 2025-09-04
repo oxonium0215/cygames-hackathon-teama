@@ -1,5 +1,4 @@
 using UnityEngine;
-using Game.Core;
 
 namespace Game.Level
 {
@@ -61,7 +60,7 @@ namespace Game.Level
             if (sourceRoot == null)
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                Debug.LogWarning($"{GameConstants.LOG_PREFIX_GEOMETRY} SourceRoot not set.");
+                Debug.LogWarning("[GeometryProjector] SourceRoot not set.");
 #endif
                 return;
             }

@@ -2,7 +2,6 @@
     "name": "Game.Level",
     "rootNamespace": "Game.Level",
     "references": [
-        "Game.Core"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -2,8 +2,8 @@
     "name": "Game.Tutorial",
     "rootNamespace": "Game.Tutorial",
     "references": [
-        "Game.Core",
         "Game.Player",
+        "Game.UI",
         "Unity.InputSystem",
         "Unity.TextMeshPro"
     ],

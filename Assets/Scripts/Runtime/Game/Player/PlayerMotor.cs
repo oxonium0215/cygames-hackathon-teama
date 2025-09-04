@@ -195,15 +195,17 @@ namespace Game.Player
             {
                 return;
             }
-
-            // Update ground probe (handles coyote time and jump buffer timing)
-            groundProbe?.UpdateGroundCheck(groundCheck.position, groundCheckRadius, groundMask, _springMask, Time.deltaTime);
+            
+            // The ground check has been moved to FixedUpdate.
         }
 
         private void FixedUpdate()
         {
             // Do nothing while rotating; the manager drives transform/overlaps.
             if (rotationFrozen) return;
+
+            // Perform physics-based checks at the start of the physics step.
+            groundProbe?.UpdateGroundCheck(groundCheck.position, groundCheckRadius, groundMask, _springMask, Time.fixedDeltaTime);
 
             if (transform.position.y < gameOverBorder)
             {
@@ -353,10 +355,11 @@ namespace Game.Player
         }
         private void OnTriggerEnter(Collider other)
         {
-            if (other.tag == "CheckPoint")
+            if (other.CompareTag("CheckPoint"))
             {
                 _lastCheckPoint = other.transform;
-            } else if (other.tag == "Goal")
+            }
+            else if (other.CompareTag("Goal"))
             {
                 Debug.Log("Goal!");
             }

@@ -2,7 +2,6 @@
     "name": "Game.Camera",
     "rootNamespace": "Game.Camera",
     "references": [
-        "Game.Core"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
